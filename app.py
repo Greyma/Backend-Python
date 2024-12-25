@@ -3,7 +3,6 @@ from Mongodb_class.Mongo_connect import MongoDBConnection
 from flask import Flask, request, jsonify
 from functools import wraps
 from jwt import decode, ExpiredSignatureError, InvalidTokenError
-from pymongo.errors import ConfigurationError
 import jwt
 from dotenv import load_dotenv
 import openai
