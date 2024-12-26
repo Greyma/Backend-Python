@@ -140,8 +140,8 @@ class UserController(BaseController):
             refresh_tokens_store[str(user['_id']), str(user['role_id'])] = refresh_token
             return {
                 'message': 'Connexion réussie',
-                'access_token': access_token
-                #'refresh_token': refresh_token
+                'access_token': access_token,
+                'refresh_token': refresh_token
             }
 
         return {'error': 'Email ou mot de passe incorrect'}
@@ -265,23 +265,6 @@ class AuditLogController(BaseController):
         for log in logs_data
     ]
 
-class AssetController(BaseController):
-    def __init__(self, db_connection):
-        super().__init__(db_connection, "assets")
-
-    def search(self, **kwargs):
-        assets_data = self.collection.find(kwargs)
-        return [
-        {
-            '_id': str(asset['_id']),
-            'asset_name': asset['asset_name'],
-            'asset_value': asset['asset_value'],
-            'asset_name': asset['asset_name'],
-            'date': asset['date'],
-            'description': asset['description']
-        }
-        for asset in assets_data
-    ]
 
 class CategoryController(BaseController):
     def __init__(self, db_connection):
@@ -313,26 +296,6 @@ class PeriodController(BaseController):
     ]
 
 
-class DeptController(BaseController):
-    def __init__(self, db_connection):
-        super().__init__(db_connection, "depts")
-
-    def search(self, **kwargs):
-        depts_data = self.collection.find(kwargs)
-        return [
-        {
-            '_id': str(dept['_id']),
-            'debt_type': dept['debt_type'],
-            'principal': dept['principal'],
-            'maturity_date': dept['maturity_date'],
-            'payment_due_date': dept['payment_due_date'],
-            'amount_paid': dept['amount_paid'],
-            'outstanding_balance': dept['outstanding_balance'],
-            'description': dept['description']
-        }
-        for dept in depts_data
-    ]
-
 class NotificationController(BaseController):
     def __init__(self, db_connection):
         super().__init__(db_connection, "notifications")
@@ -349,169 +312,4 @@ class NotificationController(BaseController):
             'created_at': notification['created_at']
         }
         for notification in notifications_data
-    ]
-
-class ExpenseController(BaseController):
-    def __init__(self, db_connection):
-        super().__init__(db_connection, "expenses")
-
-    def search(self, **kwargs):
-        expenses_data = self.collection.find(kwargs)
-        return [
-        {
-            '_id': str(expense['_id']),
-            'description': expense['description'],
-            'amount_expenses': expense['amount_expenses'],
-            'date': expense['date'],
-            'expense_category': expense['expense_category'],
-            'department': expense['department']
-        }
-        for expense in expenses_data
-    ]
-
-class ReportController(BaseController):
-    def __init__(self, db_connection):
-        super().__init__(db_connection, "reports")
-
-    def search(self, **kwargs):
-        """Recherche des rapports selon les critères donnés."""
-        reports_data = self.collection.find(kwargs)
-        return [
-        {
-            '_id': str(report['_id']),
-            'report_type': report['report_type'],
-            'generated_at': report['generated_at'],
-            'period': report['period'],
-            'created_by': report['created_by']
-        }
-        for report in reports_data
-    ]
-
-class RevenueController(BaseController):
-    def __init__(self, db_connection):
-        super().__init__(db_connection, "revenues")
-
-    def search(self, **kwargs):
-        """Recherche des revenus selon les critères donnés."""
-        revenues_data = self.collection.find(kwargs)
-        return [
-                {
-                    '_id': str(revenue['_id']),
-                    'description': revenue['description'],
-                    'amount_revenue': revenue['amount_revenue'],
-                    'date': revenue['date'],
-                    'product_line': revenue['product_line'],
-                    'customer_type': revenue['customer_type']
-                }
-                for revenue in revenues_data
-            ]
-
-
-class FundingController(BaseController):
-    def __init__(self, db_connection):
-        super().__init__(db_connection, "fundings")
-
-    def search(self, **kwargs):
-        fundings_data = self.collection.find(kwargs)
-        return [
-        {
-            '_id': str(funding['_id']),
-            'funding_round': funding['funding_round'],
-            'amount_raised': funding['amount_raised'],
-            'date': funding['date'],
-            'investor_name': funding['investor_name'],
-            'valuation': funding['valuation'],
-            'description': funding['description']
-        }
-        for funding in fundings_data
-    ]
-
-class CashController(BaseController):
-    def __init__(self, db_connection):
-        super().__init__(db_connection, "Cashs")
-
-    def search(self, **kwargs):
-        fundings_data = self.collection.find(kwargs)
-        return [
-        {
-            '_id': str(funding['_id']),
-            'cash_inflow': funding['cash_inflow'],
-            'cash_outflow': funding['cash_outflow'],
-            'date': funding['date'],
-            'net_cash_flow': funding['net_cash_flow'],
-            'category': funding['category'],
-            'description': funding['description']
-        }
-        for funding in fundings_data
-    ]
-
-class KPIController(BaseController):
-    def __init__(self, db_connection):
-        super().__init__(db_connection, "kpis")
-
-    def search(self, **kwargs):
-        kpis_data = self.collection.find(kwargs)
-        return [
-        {
-            '_id': str(kpi['_id']),
-            'name': kpi['name'],
-            'value': kpi['value'],
-            'date': kpi['date']
-        }
-        for kpi in kpis_data
-    ]
-class ProjectController(BaseController):
-    def __init__(self, db_connection):
-        super().__init__(db_connection, "projects")
-
-    def search(self, **kwargs):
-        projects_data = self.collection.find(kwargs)
-        return [
-        {
-            '_id': str(project['_id']),
-            'project_name': project['project_name'],
-            'start_date': project['start_date'],
-            'end_date': project['end_date'],
-            'created_by': project['created_by']
-        }
-        for project in projects_data
-    ]
-
-class ProfitController(BaseController):
-    def __init__(self, db_connection):
-        super().__init__(db_connection, "profits")
-
-    def search(self, **kwargs):
-        profits_data = self.collection.find(kwargs)
-        return [
-        {
-            '_id': str(profit['_id']),
-            'date': profit['date'],
-            'revenue': profit['revenue'],
-            'expenses': profit['expenses'],
-            'net_profit': profit['net_profit'],
-            'profit_margin': profit['profit_margin'],
-            'description': profit['description']
-        }
-        for profit in profits_data
-    ]
-
-class InvestController(BaseController):
-    def __init__(self, db_connection):
-        super().__init__(db_connection, "invests")
-
-    def search(self, **kwargs):
-        invests_data = self.collection.find(kwargs)
-        return [
-        {
-            '_id': str(invest['_id']),
-            'date': invest['date'],
-            'investment_type': invest['investment_type'],
-            'investment_amount': invest['investment_amount'],
-            'returns': invest['returns'],
-            'risk_level': invest['risk_level'],
-            'current_value': invest['current_value'],
-            'description': invest['description']
-        }
-        for invest in invests_data
     ]
