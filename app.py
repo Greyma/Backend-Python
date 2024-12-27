@@ -11,14 +11,13 @@ from flask_cors import CORS
 import os
 from classes.Controller.Controllers import (
     RoleController, UserController, AuditLogController, BudgetController,
-    CategoryController, PeriodController, NotificationController, 
+    CategoryController, PeriodController, NotificationController,
     )
 
 load_dotenv()
 SECRET_KEY =  os.getenv("SECRET_KEY")
 uri = os.getenv("uri")
 db_name = os.getenv("db_name")
-
 # Charger les variables depuis le fichier .env
 load_dotenv()
 
@@ -53,11 +52,11 @@ observer = ConcreteObserver()
 controllers_instances = []
 
 for ControllerClass in controllers_classes:
-    
+
     controller = ControllerClass(db_connection)
-    
+
     controller.add_observer(observer)
-    
+
     controllers_instances.append(controller)
 
 
@@ -100,7 +99,6 @@ def token_required(allowed_roles):
                 # Décoder le token et récupérer le rôle
                 data = decode(token, SECRET_KEY, algorithms=['HS256'])
                 user_role = data.get('role_id')
-
                 # Vérifier si le rôle de l'utilisateur est autorisé
                 if user_role not in allowed_roles:
                     return jsonify({'error': 'Accès non autorisé !'}), 403
@@ -144,7 +142,7 @@ def search(controller_name):
 
 
 @app.route('/login',methods=['POST'])
-def authentificate(): 
+def authentificate():
     data = request.json
     token = controllers['user'].authenticate(data['email'],data['password'])
     return token
@@ -153,4 +151,4 @@ def authentificate():
 
 # Exécution de l'application
 if __name__ == '__main__':
-    app.run(debug=False)
+    app.run(debug=True)

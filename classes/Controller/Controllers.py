@@ -159,7 +159,7 @@ class UserController(BaseController):
                 'exp': datetime.utcnow() + timedelta(hours=24)
             }
             return jwt.encode(payload, SECRET_KEY, algorithm='HS256')
-    
+
     def _generate_refresh_token(self, user_id, role_id, expires_in=7):
         """Génère un refresh token valide pour 7 jours."""
         payload = {
@@ -167,7 +167,7 @@ class UserController(BaseController):
             'role_id': str(role_id),
             'exp': datetime.utcnow() + timedelta(days=expires_in)
         }
-        return jwt.encode(payload, REFRESH_SECRET_KEY, algorithm='HS256')
+        return jwt.encode( payload,REFRESH_SECRET_KEY, algorithm='HS256')
 
 
     def refresh_access_token(self, refresh_token):
@@ -189,7 +189,7 @@ class UserController(BaseController):
                 return {'error': 'Utilisateur introuvable'}, 404
 
             new_access_token = self._generate_access_token(
-                user['_id'], user['first_name'], user['last_name'], 
+                user['_id'], user['first_name'], user['last_name'],
                 user['email'], user['password'], user['role_id']
             )
             return {'access_token': new_access_token}, 200
@@ -221,7 +221,7 @@ class UserController(BaseController):
 class RoleController(BaseController):
     def __init__(self, db_connection):
         super().__init__(db_connection, "roles")
-    
+
     def search(self, **kwargs):
         roles_data = self.collection.find(kwargs)
         return [
