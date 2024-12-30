@@ -10,9 +10,10 @@ from classes.Controller.observer import ConcreteObserver
 from flask_cors import CORS
 import os
 from classes.Controller.Controllers import (
-    RoleController, UserController, AuditLogController, BudgetController,
-    CategoryController, PeriodController, NotificationController,
+ UserController, EtudiantController ,EnseignantsController ,GroupesController
     )
+
+
 
 load_dotenv()
 SECRET_KEY =  os.getenv("SECRET_KEY")
@@ -30,19 +31,19 @@ CORS(app)
 db_connection = MongoDBConnection(uri, db_name)
 
 
+
 controllers = {
-    "role": RoleController(db_connection),
     "user": UserController(db_connection),
-    "audit": AuditLogController(db_connection),
-    "budget": BudgetController(db_connection),
-    "category": CategoryController(db_connection),
-    "period": PeriodController(db_connection),
-    "notif": NotificationController(db_connection)
+    "etudiants": EtudiantController(db_connection),
+    "enseignants": EnseignantsController(db_connection),
+    "groupes": GroupesController(db_connection)
+
+
 }
 
 controllers_classes = [
-    RoleController, UserController, AuditLogController, BudgetController,
-    CategoryController, PeriodController, NotificationController
+     UserController,EtudiantController,EnseignantsController,GroupesController
+
 ]
 
 # Initialisation de l'observateur unique (Singleton)
@@ -74,8 +75,7 @@ def update_item(controller_name, item_id):
     controllers[controller_name].update(item_id, data)
     return jsonify({"message": f"{controller_name.capitalize()} avec ID {item_id} mis à jour."}), 200
 
-def search_items(controller_name):
-    criteria = request.args.to_dict()
+def search_items(controller_name , **criteria):
     results = controllers[controller_name].search(**criteria)
     return jsonify(results), 200
 
@@ -121,24 +121,26 @@ def add(controller_name):
     return add_item(controller_name)
 
 @app.route('/<controller_name>/<item_id>', methods=['DELETE'])
-@token_required(['admin', '671420c2df2d71de25efde15', 'viewer'])
+# @token_required(['admin', '671420c2df2d71de25efde15', 'viewer'])
 def delete(controller_name, item_id):
     return delete_item(controller_name, item_id)
 
 @app.route('/<controller_name>/<item_id>', methods=['PUT'])
-@token_required(['admin', '671420c2df2d71de25efde15', 'viewer'])
+# @token_required(['admin', '671420c2df2d71de25efde15', 'viewer'])
 def update(controller_name, item_id):
     return update_item(controller_name, item_id)
 
 @app.route('/<controller_name>', methods=['GET'])
-@token_required(['admin', '671420c2df2d71de25efde15', 'viewer'])
+# @token_required(['admin', '671420c2df2d71de25efde15', 'viewer'])
 def get_all(controller_name):
     return get_all_items(controller_name)
 
-@app.route('/<controller_name>/search', methods=['GET'])
-@token_required(['admin', '671420c2df2d71de25efde15', 'viewer'])
+@app.route('/<controller_name>/search', methods=['POST'])
+# @token_required(['admin', '671420c2df2d71de25efde15', 'viewer'])
 def search(controller_name):
-    return search_items(controller_name)
+    criteria = request.json
+    print(criteria , flush=True)
+    return search_items(controller_name , **criteria)
 
 
 @app.route('/login',methods=['POST'])
@@ -151,4 +153,4 @@ def authentificate():
 
 # Exécution de l'application
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(debug=True )

@@ -217,301 +217,433 @@ class UserController(BaseController):
         except jwt.InvalidTokenError:
             return {'valid': False, 'error': 'Token invalide'}
 
-
-class RoleController(BaseController):
+class EtudiantController(BaseController):
     def __init__(self, db_connection):
-        super().__init__(db_connection, "roles")
+        super().__init__(db_connection, "etudiants")
 
     def search(self, **kwargs):
-        roles_data = self.collection.find(kwargs)
+        etudiants_data = self.collection.find(kwargs)
         return [
-            {'_id': str(role['_id']), 'role_name': role['role_name']}
-            for role in roles_data
+            {
+                '_id': str(etudiant['_id']),
+                'nom': etudiant['nom'],
+                'prenom': etudiant['prenom'],
+                'date_naissance': etudiant['date_naissance'],
+                'telephone': etudiant['telephone'],
+                'telephone_pere': etudiant['telephone_pere'],
+                'niveau_scholaire': etudiant['niveau_scholaire'],
+                'annee_scholaire': etudiant['annee_scholaire'],
+                'code_de_barre': etudiant['code_de_barre']
+            }
+            for etudiant in etudiants_data
         ]
 
+    def add(self, document):
+        """Ajoute un étudiant à la collection."""
+        super().add(document)
 
-class BudgetController(BaseController):
+    def delete(self, document_id):
+        """Supprime un étudiant par son ID."""
+        super().delete(document_id)
+
+    def update(self, document_id, updated_data):
+        """Met à jour un étudiant par son ID."""
+        super().update(document_id, updated_data)
+
+class EnseignantsController(BaseController):
     def __init__(self, db_connection):
-        super().__init__(db_connection, "budgets")
+        super().__init__(db_connection, "enseignants")
 
     def search(self, **kwargs):
-        budgets_data = self.collection.find(kwargs)
+        enseignants_data = self.collection.find(kwargs)
         return [
-        {
-            '_id': str(budget['_id']),
-            'allocated_budget': budget['allocated_budget'],
-            'fiscal_year': budget['fiscal_year'],
-            'department': budget['department'],
-            'spent_budget': budget['spent_budget'],
-            'remaining_budget': budget['remaining_budget'],
-            'description': budget['description']
-        }
-        for budget in budgets_data
-    ]
+            {
+                '_id': str(enseignant['_id']),
+                'nom': enseignant['nom'],
+                'prenom': enseignant['prenom'],
+                'telephone': enseignant['telephone'],
+                'code_barre': enseignant['code_barre'],
+                'niveau_academique': enseignant['niveau_academique']
+            }
+            for enseignant in enseignants_data
+        ]
 
-class AuditLogController(BaseController):
+    def add(self, document):
+        """Ajoute un enseignant à la collection."""
+        super().add(document)
+
+    def delete(self, document_id):
+        """Supprime un enseignant par son ID."""
+        super().delete(document_id)
+
+    def update(self, document_id, updated_data):
+        """Met à jour un enseignant par son ID."""
+        super().update(document_id, updated_data)
+
+class GroupesController(BaseController):
     def __init__(self, db_connection):
-        super().__init__(db_connection, "audit_logs")
+        super().__init__(db_connection, "groupes")
 
     def search(self, **kwargs):
-        logs_data = self.collection.find(kwargs)
-        return [
-        {
-            '_id': str(log['_id']),
-            'user': log['user'],
-            'action': log['action'],
-            'timestamp': log['timestamp']
-        }
-        for log in logs_data
-    ]
+        print("Search called with kwargs:", kwargs)
+        groupes_data = self.collection.find(kwargs)
+        result = []
+        for groupe in groupes_data:
+            enseignant = self.collection.database['enseignants'].find_one({'_id': ObjectId(groupe['enseignant'])})
+            etudiants = [self.collection.database['etudiants'].find_one({'_id': ObjectId(etudiant_id)}) for etudiant_id in groupe['etudiants']]
+            result.append({
+                '_id': str(groupe['_id']),
+                'nomGroupe': groupe['nomGroupe'],
+                'enseignant': {
+                    '_id': str(enseignant['_id']),
+                    'nom': enseignant['nom'],
+                    'prenom': enseignant['prenom']
+                } if enseignant else None,
+                'etudiants': [
+                    {
+                        '_id': str(etudiant['_id']),
+                        'nom': etudiant['nom'],
+                        'prenom': etudiant['prenom']
+                    } for etudiant in etudiants if etudiant
+                ]
+            })
+        return result
 
-class AssetController(BaseController):
-    def __init__(self, db_connection):
-        super().__init__(db_connection, "assets")
+    def add(self, document):
+        """Ajoute un groupe à la collection."""
+        existing_group = self.collection.find_one({
+            'nomGroupe': document['nomGroupe'],
+            'enseignant': document['enseignant']
+        })
 
-    def search(self, **kwargs):
-        assets_data = self.collection.find(kwargs)
-        return [
-        {
-            '_id': str(asset['_id']),
-            'asset_name': asset['asset_name'],
-            'asset_value': asset['asset_value'],
-            'asset_name': asset['asset_name'],
-            'date': asset['date'],
-            'description': asset['description']
-        }
-        for asset in assets_data
-    ]
+        if existing_group:
+            # Ajouter uniquement les nouveaux étudiants au groupe existant
+            existing_etudiants = set(existing_group['etudiants'])
+            new_etudiants = set(document['etudiants'])
+            etudiants_to_add = new_etudiants - existing_etudiants
 
-class CategoryController(BaseController):
-    def __init__(self, db_connection):
-        super().__init__(db_connection, "categories")
+            if etudiants_to_add:
+                existing_group['etudiants'].extend(list(etudiants_to_add))
+                self.update(existing_group['_id'], {'etudiants': existing_group['etudiants']})
+        else:
+            # Ajouter un nouveau groupe
+            super().add(document)
 
-    def search(self, **kwargs):
-        categories_data = self.collection.find(kwargs)
-        return [
-        {
-            '_id': str(category['_id']),
-            'category_name': category['category_name']
-        }
-        for category in categories_data
-    ]
+    def delete(self, document_id):
+        """Supprime un groupe par son ID."""
+        super().delete(document_id)
 
-class PeriodController(BaseController):
-    def __init__(self, db_connection):
-        super().__init__(db_connection, "periods")
+    def update(self, document_id, updated_data):
+        """Met à jour un groupe par son ID."""
+        super().update(document_id, updated_data)
 
-    def search(self, **kwargs):
-        periods_data = self.collection.find(kwargs)
-        return [
-        {
-            '_id': str(period['_id']),
-            'start_date': period['start_date'],
-            'end_date': period['end_date']
-        }
-        for period in periods_data
-    ]
+    def remove_etudiant(self, groupe_id, etudiant_id):
+        """Supprime un étudiant d'un groupe par son ID."""
+        groupe = self.collection.find_one({"_id": ObjectId(groupe_id)})
+        if not groupe:
+            return {'error': 'Groupe introuvable'}, 404
 
+        if etudiant_id in groupe['etudiants']:
+            groupe['etudiants'].remove(etudiant_id)
+            self.update(groupe_id, {'etudiants': groupe['etudiants']})
+            return {'message': 'Étudiant supprimé du groupe'}, 200
+        else:
+            return {'error': 'Étudiant non trouvé dans le groupe'}, 404
 
-class DeptController(BaseController):
-    def __init__(self, db_connection):
-        super().__init__(db_connection, "depts")
+# class RoleController(BaseController):
+#     def __init__(self, db_connection):
+#         super().__init__(db_connection, "roles")
 
-    def search(self, **kwargs):
-        depts_data = self.collection.find(kwargs)
-        return [
-        {
-            '_id': str(dept['_id']),
-            'debt_type': dept['debt_type'],
-            'principal': dept['principal'],
-            'maturity_date': dept['maturity_date'],
-            'payment_due_date': dept['payment_due_date'],
-            'amount_paid': dept['amount_paid'],
-            'outstanding_balance': dept['outstanding_balance'],
-            'description': dept['description']
-        }
-        for dept in depts_data
-    ]
-
-class NotificationController(BaseController):
-    def __init__(self, db_connection):
-        super().__init__(db_connection, "notifications")
+#     def search(self, **kwargs):
+#         roles_data = self.collection.find(kwargs)
+#         return [
+#             {'_id': str(role['_id']), 'role_name': role['role_name']}
+#             for role in roles_data
+#         ]
 
 
-    def search(self, **kwargs):
-        notifications_data = self.collection.find(kwargs)
-        return [
-        {
-            '_id': str(notification['_id']),
-            'user': notification['user'],
-            'message': notification['message'],
-            'status': notification['status'],
-            'created_at': notification['created_at']
-        }
-        for notification in notifications_data
-    ]
+# class BudgetController(BaseController):
+#     def __init__(self, db_connection):
+#         super().__init__(db_connection, "budgets")
 
-class ExpenseController(BaseController):
-    def __init__(self, db_connection):
-        super().__init__(db_connection, "expenses")
+#     def search(self, **kwargs):
+#         budgets_data = self.collection.find(kwargs)
+#         return [
+#         {
+#             '_id': str(budget['_id']),
+#             'allocated_budget': budget['allocated_budget'],
+#             'fiscal_year': budget['fiscal_year'],
+#             'department': budget['department'],
+#             'spent_budget': budget['spent_budget'],
+#             'remaining_budget': budget['remaining_budget'],
+#             'description': budget['description']
+#         }
+#         for budget in budgets_data
+#     ]
 
-    def search(self, **kwargs):
-        expenses_data = self.collection.find(kwargs)
-        return [
-        {
-            '_id': str(expense['_id']),
-            'description': expense['description'],
-            'amount_expenses': expense['amount_expenses'],
-            'date': expense['date'],
-            'expense_category': expense['expense_category'],
-            'department': expense['department']
-        }
-        for expense in expenses_data
-    ]
+# class AuditLogController(BaseController):
+#     def __init__(self, db_connection):
+#         super().__init__(db_connection, "audit_logs")
 
-class ReportController(BaseController):
-    def __init__(self, db_connection):
-        super().__init__(db_connection, "reports")
+#     def search(self, **kwargs):
+#         logs_data = self.collection.find(kwargs)
+#         return [
+#         {
+#             '_id': str(log['_id']),
+#             'user': log['user'],
+#             'action': log['action'],
+#             'timestamp': log['timestamp']
+#         }
+#         for log in logs_data
+#     ]
 
-    def search(self, **kwargs):
-        """Recherche des rapports selon les critères donnés."""
-        reports_data = self.collection.find(kwargs)
-        return [
-        {
-            '_id': str(report['_id']),
-            'report_type': report['report_type'],
-            'generated_at': report['generated_at'],
-            'period': report['period'],
-            'created_by': report['created_by']
-        }
-        for report in reports_data
-    ]
+# class AssetController(BaseController):
+#     def __init__(self, db_connection):
+#         super().__init__(db_connection, "assets")
 
-class RevenueController(BaseController):
-    def __init__(self, db_connection):
-        super().__init__(db_connection, "revenues")
+#     def search(self, **kwargs):
+#         assets_data = self.collection.find(kwargs)
+#         return [
+#         {
+#             '_id': str(asset['_id']),
+#             'asset_name': asset['asset_name'],
+#             'asset_value': asset['asset_value'],
+#             'asset_name': asset['asset_name'],
+#             'date': asset['date'],
+#             'description': asset['description']
+#         }
+#         for asset in assets_data
+#     ]
 
-    def search(self, **kwargs):
-        """Recherche des revenus selon les critères donnés."""
-        revenues_data = self.collection.find(kwargs)
-        return [
-                {
-                    '_id': str(revenue['_id']),
-                    'description': revenue['description'],
-                    'amount_revenue': revenue['amount_revenue'],
-                    'date': revenue['date'],
-                    'product_line': revenue['product_line'],
-                    'customer_type': revenue['customer_type']
-                }
-                for revenue in revenues_data
-            ]
+# class CategoryController(BaseController):
+#     def __init__(self, db_connection):
+#         super().__init__(db_connection, "categories")
+
+#     def search(self, **kwargs):
+#         categories_data = self.collection.find(kwargs)
+#         return [
+#         {
+#             '_id': str(category['_id']),
+#             'category_name': category['category_name']
+#         }
+#         for category in categories_data
+#     ]
+
+# class PeriodController(BaseController):
+#     def __init__(self, db_connection):
+#         super().__init__(db_connection, "periods")
+
+#     def search(self, **kwargs):
+#         periods_data = self.collection.find(kwargs)
+#         return [
+#         {
+#             '_id': str(period['_id']),
+#             'start_date': period['start_date'],
+#             'end_date': period['end_date']
+#         }
+#         for period in periods_data
+#     ]
 
 
-class FundingController(BaseController):
-    def __init__(self, db_connection):
-        super().__init__(db_connection, "fundings")
+# class DeptController(BaseController):
+#     def __init__(self, db_connection):
+#         super().__init__(db_connection, "depts")
 
-    def search(self, **kwargs):
-        fundings_data = self.collection.find(kwargs)
-        return [
-        {
-            '_id': str(funding['_id']),
-            'funding_round': funding['funding_round'],
-            'amount_raised': funding['amount_raised'],
-            'date': funding['date'],
-            'investor_name': funding['investor_name'],
-            'valuation': funding['valuation'],
-            'description': funding['description']
-        }
-        for funding in fundings_data
-    ]
+#     def search(self, **kwargs):
+#         depts_data = self.collection.find(kwargs)
+#         return [
+#         {
+#             '_id': str(dept['_id']),
+#             'debt_type': dept['debt_type'],
+#             'principal': dept['principal'],
+#             'maturity_date': dept['maturity_date'],
+#             'payment_due_date': dept['payment_due_date'],
+#             'amount_paid': dept['amount_paid'],
+#             'outstanding_balance': dept['outstanding_balance'],
+#             'description': dept['description']
+#         }
+#         for dept in depts_data
+#     ]
 
-class CashController(BaseController):
-    def __init__(self, db_connection):
-        super().__init__(db_connection, "Cashs")
+# class NotificationController(BaseController):
+#     def __init__(self, db_connection):
+#         super().__init__(db_connection, "notifications")
 
-    def search(self, **kwargs):
-        fundings_data = self.collection.find(kwargs)
-        return [
-        {
-            '_id': str(funding['_id']),
-            'cash_inflow': funding['cash_inflow'],
-            'cash_outflow': funding['cash_outflow'],
-            'date': funding['date'],
-            'net_cash_flow': funding['net_cash_flow'],
-            'category': funding['category'],
-            'description': funding['description']
-        }
-        for funding in fundings_data
-    ]
 
-class KPIController(BaseController):
-    def __init__(self, db_connection):
-        super().__init__(db_connection, "kpis")
+#     def search(self, **kwargs):
+#         notifications_data = self.collection.find(kwargs)
+#         return [
+#         {
+#             '_id': str(notification['_id']),
+#             'user': notification['user'],
+#             'message': notification['message'],
+#             'status': notification['status'],
+#             'created_at': notification['created_at']
+#         }
+#         for notification in notifications_data
+#     ]
 
-    def search(self, **kwargs):
-        kpis_data = self.collection.find(kwargs)
-        return [
-        {
-            '_id': str(kpi['_id']),
-            'name': kpi['name'],
-            'value': kpi['value'],
-            'date': kpi['date']
-        }
-        for kpi in kpis_data
-    ]
-class ProjectController(BaseController):
-    def __init__(self, db_connection):
-        super().__init__(db_connection, "projects")
+# class ExpenseController(BaseController):
+#     def __init__(self, db_connection):
+#         super().__init__(db_connection, "expenses")
 
-    def search(self, **kwargs):
-        projects_data = self.collection.find(kwargs)
-        return [
-        {
-            '_id': str(project['_id']),
-            'project_name': project['project_name'],
-            'start_date': project['start_date'],
-            'end_date': project['end_date'],
-            'created_by': project['created_by']
-        }
-        for project in projects_data
-    ]
+#     def search(self, **kwargs):
+#         expenses_data = self.collection.find(kwargs)
+#         return [
+#         {
+#             '_id': str(expense['_id']),
+#             'description': expense['description'],
+#             'amount_expenses': expense['amount_expenses'],
+#             'date': expense['date'],
+#             'expense_category': expense['expense_category'],
+#             'department': expense['department']
+#         }
+#         for expense in expenses_data
+#     ]
 
-class ProfitController(BaseController):
-    def __init__(self, db_connection):
-        super().__init__(db_connection, "profits")
+# class ReportController(BaseController):
+#     def __init__(self, db_connection):
+#         super().__init__(db_connection, "reports")
 
-    def search(self, **kwargs):
-        profits_data = self.collection.find(kwargs)
-        return [
-        {
-            '_id': str(profit['_id']),
-            'date': profit['date'],
-            'revenue': profit['revenue'],
-            'expenses': profit['expenses'],
-            'net_profit': profit['net_profit'],
-            'profit_margin': profit['profit_margin'],
-            'description': profit['description']
-        }
-        for profit in profits_data
-    ]
+#     def search(self, **kwargs):
+#         """Recherche des rapports selon les critères donnés."""
+#         reports_data = self.collection.find(kwargs)
+#         return [
+#         {
+#             '_id': str(report['_id']),
+#             'report_type': report['report_type'],
+#             'generated_at': report['generated_at'],
+#             'period': report['period'],
+#             'created_by': report['created_by']
+#         }
+#         for report in reports_data
+#     ]
 
-class InvestController(BaseController):
-    def __init__(self, db_connection):
-        super().__init__(db_connection, "invests")
+# class RevenueController(BaseController):
+#     def __init__(self, db_connection):
+#         super().__init__(db_connection, "revenues")
 
-    def search(self, **kwargs):
-        invests_data = self.collection.find(kwargs)
-        return [
-        {
-            '_id': str(invest['_id']),
-            'date': invest['date'],
-            'investment_type': invest['investment_type'],
-            'investment_amount': invest['investment_amount'],
-            'returns': invest['returns'],
-            'risk_level': invest['risk_level'],
-            'current_value': invest['current_value'],
-            'description': invest['description']
-        }
-        for invest in invests_data
-    ]
+#     def search(self, **kwargs):
+#         """Recherche des revenus selon les critères donnés."""
+#         revenues_data = self.collection.find(kwargs)
+#         return [
+#                 {
+#                     '_id': str(revenue['_id']),
+#                     'description': revenue['description'],
+#                     'amount_revenue': revenue['amount_revenue'],
+#                     'date': revenue['date'],
+#                     'product_line': revenue['product_line'],
+#                     'customer_type': revenue['customer_type']
+#                 }
+#                 for revenue in revenues_data
+#             ]
+
+
+# class FundingController(BaseController):
+#     def __init__(self, db_connection):
+#         super().__init__(db_connection, "fundings")
+
+#     def search(self, **kwargs):
+#         fundings_data = self.collection.find(kwargs)
+#         return [
+#         {
+#             '_id': str(funding['_id']),
+#             'funding_round': funding['funding_round'],
+#             'amount_raised': funding['amount_raised'],
+#             'date': funding['date'],
+#             'investor_name': funding['investor_name'],
+#             'valuation': funding['valuation'],
+#             'description': funding['description']
+#         }
+#         for funding in fundings_data
+#     ]
+
+# class CashController(BaseController):
+#     def __init__(self, db_connection):
+#         super().__init__(db_connection, "Cashs")
+
+#     def search(self, **kwargs):
+#         fundings_data = self.collection.find(kwargs)
+#         return [
+#         {
+#             '_id': str(funding['_id']),
+#             'cash_inflow': funding['cash_inflow'],
+#             'cash_outflow': funding['cash_outflow'],
+#             'date': funding['date'],
+#             'net_cash_flow': funding['net_cash_flow'],
+#             'category': funding['category'],
+#             'description': funding['description']
+#         }
+#         for funding in fundings_data
+#     ]
+
+# class KPIController(BaseController):
+#     def __init__(self, db_connection):
+#         super().__init__(db_connection, "kpis")
+
+#     def search(self, **kwargs):
+#         kpis_data = self.collection.find(kwargs)
+#         return [
+#         {
+#             '_id': str(kpi['_id']),
+#             'name': kpi['name'],
+#             'value': kpi['value'],
+#             'date': kpi['date']
+#         }
+#         for kpi in kpis_data
+#     ]
+# class ProjectController(BaseController):
+#     def __init__(self, db_connection):
+#         super().__init__(db_connection, "projects")
+
+#     def search(self, **kwargs):
+#         projects_data = self.collection.find(kwargs)
+#         return [
+#         {
+#             '_id': str(project['_id']),
+#             'project_name': project['project_name'],
+#             'start_date': project['start_date'],
+#             'end_date': project['end_date'],
+#             'created_by': project['created_by']
+#         }
+#         for project in projects_data
+#     ]
+
+# class ProfitController(BaseController):
+#     def __init__(self, db_connection):
+#         super().__init__(db_connection, "profits")
+
+#     def search(self, **kwargs):
+#         profits_data = self.collection.find(kwargs)
+#         return [
+#         {
+#             '_id': str(profit['_id']),
+#             'date': profit['date'],
+#             'revenue': profit['revenue'],
+#             'expenses': profit['expenses'],
+#             'net_profit': profit['net_profit'],
+#             'profit_margin': profit['profit_margin'],
+#             'description': profit['description']
+#         }
+#         for profit in profits_data
+#     ]
+
+# class InvestController(BaseController):
+#     def __init__(self, db_connection):
+#         super().__init__(db_connection, "invests")
+
+#     def search(self, **kwargs):
+#         invests_data = self.collection.find(kwargs)
+#         return [
+#         {
+#             '_id': str(invest['_id']),
+#             'date': invest['date'],
+#             'investment_type': invest['investment_type'],
+#             'investment_amount': invest['investment_amount'],
+#             'returns': invest['returns'],
+#             'risk_level': invest['risk_level'],
+#             'current_value': invest['current_value'],
+#             'description': invest['description']
+#         }
+#         for invest in invests_data
+#     ]
