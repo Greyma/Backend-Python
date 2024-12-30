@@ -1,7 +1,7 @@
 # Fintech Backend API Documentation
 
 ### **Base URL**
-> [https://fintech-backend-ltm6.onrender.com](https://fintech-backend-ltm6.onrender.com)
+> [Lien du Backend](https://www.onrender.com)
 
 ---
 
@@ -18,7 +18,7 @@
 ---
 
 ## **Introduction**
-Ce backend a été conçu pour une application Fintech et expose plusieurs **endpoints REST** permettant de gérer différentes entités comme des revenus, utilisateurs, rapports, projets, notifications, et plus encore. Le système est pensé pour une **gestion optimisée de la mémoire** et permet une **détection en temps réel** des événements grâce à une architecture robuste basée sur plusieurs **design patterns**.
+Ce backend a été conçu pour une application Fintech et expose plusieurs **endpoints REST** permettant de gérer différentes entités comme des revenus, utilisateurs, projets, notifications, et plus encore. Le système est pensé pour une **gestion optimisée de la mémoire** et permet une **détection en temps réel** des événements grâce à une architecture robuste basée sur plusieurs **design patterns**.
 
 ---
 
@@ -28,8 +28,6 @@ Ce backend a été conçu pour une application Fintech et expose plusieurs **end
 Cette méthode permet de récupérer des données à partir de différentes entités.
 
 - **Endpoints :**
-  - `/revenue`
-  - `/report`
   - `/role`
   - `/user`
   - `/audit`
@@ -37,9 +35,6 @@ Cette méthode permet de récupérer des données à partir de différentes enti
   - `/category`
   - `/period`
   - `/notif`
-  - `/expense`
-  - `/kpi`
-  - `/project`
 
 ---
 

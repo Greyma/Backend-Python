@@ -140,8 +140,8 @@ class UserController(BaseController):
             refresh_tokens_store[str(user['_id']), str(user['role_id'])] = refresh_token
             return {
                 'message': 'Connexion réussie',
-                'access_token': access_token
-                #'refresh_token': refresh_token
+                'access_token': access_token,
+                'refresh_token': refresh_token
             }
 
         return {'error': 'Email ou mot de passe incorrect'}
