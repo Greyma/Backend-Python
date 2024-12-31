@@ -3,9 +3,7 @@ from Mongodb_class.Mongo_connect import MongoDBConnection
 from flask import Flask, request, jsonify
 from functools import wraps
 from jwt import decode, ExpiredSignatureError, InvalidTokenError
-import jwt
 from dotenv import load_dotenv
-import openai
 from classes.Controller.observer import ConcreteObserver
 from flask_cors import CORS
 import os
@@ -14,30 +12,21 @@ from classes.Controller.Controllers import (
     )
 
 
-
 load_dotenv()
 SECRET_KEY =  os.getenv("SECRET_KEY")
 uri = os.getenv("uri")
 db_name = os.getenv("db_name")
-# Charger les variables depuis le fichier .env
-load_dotenv()
-
-# Récupérer les clés secrètes
 API_KEYS_Generative = os.getenv("API_KEYS_Generative")
-
 
 app = Flask(__name__)
 CORS(app)
 db_connection = MongoDBConnection(uri, db_name)
-
-
 
 controllers = {
     "user": UserController(db_connection),
     "etudiants": EtudiantController(db_connection),
     "enseignants": EnseignantsController(db_connection),
     "groupes": GroupesController(db_connection)
-
 
 }
 
@@ -114,8 +103,6 @@ def token_required(allowed_roles):
         return wrapper
     return decorator
 
-
-
 @app.route('/<controller_name>', methods=['POST'])
 def add(controller_name):
     return add_item(controller_name)
@@ -148,8 +135,6 @@ def authentificate():
     data = request.json
     token = controllers['user'].authenticate(data['email'],data['password'])
     return token
-
-
 
 # Exécution de l'application
 if __name__ == '__main__':
