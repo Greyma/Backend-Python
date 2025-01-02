@@ -8,7 +8,7 @@ from classes.Controller.observer import ConcreteObserver
 from flask_cors import CORS
 import os
 from classes.Controller.Controllers import (
- UserController, EtudiantController ,EnseignantsController ,GroupesController
+ UserController, EtudiantController ,EnseignantsController ,MatieresManager
     )
 
 
@@ -26,12 +26,11 @@ controllers = {
     "user": UserController(db_connection),
     "etudiants": EtudiantController(db_connection),
     "enseignants": EnseignantsController(db_connection),
-    "groupes": GroupesController(db_connection)
-
+    "matiere" : MatieresManager(db_connection)
 }
 
 controllers_classes = [
-     UserController,EtudiantController,EnseignantsController,GroupesController
+     UserController,EtudiantController,EnseignantsController,MatieresManager
 
 ]
 
@@ -108,7 +107,7 @@ def add(controller_name):
     return add_item(controller_name)
 
 @app.route('/<controller_name>/<item_id>', methods=['DELETE'])
-# @token_required(['admin', '671420c2df2d71de25efde15', 'viewer'])
+# @token_required(['admin'])
 def delete(controller_name, item_id):
     return delete_item(controller_name, item_id)
 
@@ -118,7 +117,7 @@ def update(controller_name, item_id):
     return update_item(controller_name, item_id)
 
 @app.route('/<controller_name>', methods=['GET'])
-# @token_required(['admin', '671420c2df2d71de25efde15', 'viewer'])
+# @token_required(['admin', 'viewer'])
 def get_all(controller_name):
     return get_all_items(controller_name)
 
@@ -136,6 +135,37 @@ def authentificate():
     token = controllers['user'].authenticate(data['email'],data['password'])
     return token
 
+
+@app.route('/addmatiere',methods=['POST']) 
+def ajouter() : 
+    data = request.json
+    controllers['matiere'].add(data)
+    return jsonify({"message": f"{controllers['matiere'].capitalize()} ajouté avec succès"}), 201
+
+@app.route('/chapitre',methods=['POST']) 
+def ajouter() : 
+    data = request.json
+    controllers['matiere'].add_chapitre(data)
+    return jsonify({"message": f"{controllers['matiere'].capitalize()} ajouté avec succès"}), 201
+
+@app.route('/to_chapitre',methods=['POST']) 
+def ajouter() : 
+    data = request.json
+    controllers['matiere'].add_etudiant_to_chapitre(data)
+    return jsonify({"message": f"{controllers['matiere'].capitalize()} ajouté avec succès"}), 201
+
+@app.route('/to_matiere',methods=['POST']) 
+def ajouter() : 
+    data = request.json
+    controllers['matiere'].add_etudiant_to_matiere(data)
+    return jsonify({"message": f"{controllers['matiere'].capitalize()} ajouté avec succès"}), 201
+
+@app.route('/generateCode',methods=['POST']) 
+def generateCode() :
+    data = request.json
+    results = controllers['matiere'].generate_code(matiere_id=data['matiere_id'], chapitre_id=data['chapitre_id'], expiration_days=data['expiration_days'], usage_limit=data['usage_limit'])   
+    return jsonify(results), 200
+    
 # Exécution de l'application
 if __name__ == '__main__':
     app.run(debug=True )

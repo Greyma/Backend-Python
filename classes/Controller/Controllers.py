@@ -4,6 +4,9 @@ import jwt
 from dotenv import load_dotenv
 import os
 from bson import ObjectId
+import random
+import string
+from datetime import datetime, timedelta
 from classes.Controller.subject import Subject
 from threading import Lock
 from abc import ABC, abstractmethod
@@ -237,18 +240,7 @@ class EtudiantController(BaseController):
             }
             for etudiant in etudiants_data
         ]
-
-    def add(self, document):
-        """Ajoute un étudiant à la collection."""
-        super().add(document)
-
-    def delete(self, document_id):
-        """Supprime un étudiant par son ID."""
-        super().delete(document_id)
-
-    def update(self, document_id, updated_data):
-        """Met à jour un étudiant par son ID."""
-        super().update(document_id, updated_data)
+    
 
 class EnseignantsController(BaseController):
     def __init__(self, db_connection):
@@ -267,119 +259,19 @@ class EnseignantsController(BaseController):
             }
             for enseignant in enseignants_data
         ]
+    
 
-    def add(self, document):
-        """Ajoute un enseignant à la collection."""
-        super().add(document)
+class RoleController(BaseController):
+     def __init__(self, db_connection):
+         super().__init__(db_connection, "roles")
 
-    def delete(self, document_id):
-        """Supprime un enseignant par son ID."""
-        super().delete(document_id)
+     def search(self, **kwargs):
+         roles_data = self.collection.find(kwargs)
+         return [
+             {'_id': str(role['_id']), 'role_name': role['role_name']}
+             for role in roles_data
+         ]
 
-    def update(self, document_id, updated_data):
-        """Met à jour un enseignant par son ID."""
-        super().update(document_id, updated_data)
-
-class GroupesController(BaseController):
-    def __init__(self, db_connection):
-        super().__init__(db_connection, "groupes")
-
-    def search(self, **kwargs):
-        print("Search called with kwargs:", kwargs)
-        groupes_data = self.collection.find(kwargs)
-        result = []
-        for groupe in groupes_data:
-            enseignant = self.collection.database['enseignants'].find_one({'_id': ObjectId(groupe['enseignant'])})
-            etudiants = [self.collection.database['etudiants'].find_one({'_id': ObjectId(etudiant_id)}) for etudiant_id in groupe['etudiants']]
-            result.append({
-                '_id': str(groupe['_id']),
-                'nomGroupe': groupe['nomGroupe'],
-                'enseignant': {
-                    '_id': str(enseignant['_id']),
-                    'nom': enseignant['nom'],
-                    'prenom': enseignant['prenom']
-                } if enseignant else None,
-                'etudiants': [
-                    {
-                        '_id': str(etudiant['_id']),
-                        'nom': etudiant['nom'],
-                        'prenom': etudiant['prenom']
-                    } for etudiant in etudiants if etudiant
-                ]
-            })
-        return result
-
-    def add(self, document):
-        """Ajoute un groupe à la collection."""
-        existing_group = self.collection.find_one({
-            'nomGroupe': document['nomGroupe'],
-            'enseignant': document['enseignant']
-        })
-
-        if existing_group:
-            # Ajouter uniquement les nouveaux étudiants au groupe existant
-            existing_etudiants = set(existing_group['etudiants'])
-            new_etudiants = set(document['etudiants'])
-            etudiants_to_add = new_etudiants - existing_etudiants
-
-            if etudiants_to_add:
-                existing_group['etudiants'].extend(list(etudiants_to_add))
-                self.update(existing_group['_id'], {'etudiants': existing_group['etudiants']})
-        else:
-            # Ajouter un nouveau groupe
-            super().add(document)
-
-    def delete(self, document_id):
-        """Supprime un groupe par son ID."""
-        super().delete(document_id)
-
-    def update(self, document_id, updated_data):
-        """Met à jour un groupe par son ID."""
-        super().update(document_id, updated_data)
-
-    def remove_etudiant(self, groupe_id, etudiant_id):
-        """Supprime un étudiant d'un groupe par son ID."""
-        groupe = self.collection.find_one({"_id": ObjectId(groupe_id)})
-        if not groupe:
-            return {'error': 'Groupe introuvable'}, 404
-
-        if etudiant_id in groupe['etudiants']:
-            groupe['etudiants'].remove(etudiant_id)
-            self.update(groupe_id, {'etudiants': groupe['etudiants']})
-            return {'message': 'Étudiant supprimé du groupe'}, 200
-        else:
-            return {'error': 'Étudiant non trouvé dans le groupe'}, 404
-
-# class RoleController(BaseController):
-#     def __init__(self, db_connection):
-#         super().__init__(db_connection, "roles")
-
-#     def search(self, **kwargs):
-#         roles_data = self.collection.find(kwargs)
-#         return [
-#             {'_id': str(role['_id']), 'role_name': role['role_name']}
-#             for role in roles_data
-#         ]
-
-
-# class BudgetController(BaseController):
-#     def __init__(self, db_connection):
-#         super().__init__(db_connection, "budgets")
-
-#     def search(self, **kwargs):
-#         budgets_data = self.collection.find(kwargs)
-#         return [
-#         {
-#             '_id': str(budget['_id']),
-#             'allocated_budget': budget['allocated_budget'],
-#             'fiscal_year': budget['fiscal_year'],
-#             'department': budget['department'],
-#             'spent_budget': budget['spent_budget'],
-#             'remaining_budget': budget['remaining_budget'],
-#             'description': budget['description']
-#         }
-#         for budget in budgets_data
-#     ]
 
 # class AuditLogController(BaseController):
 #     def __init__(self, db_connection):
@@ -397,253 +289,133 @@ class GroupesController(BaseController):
 #         for log in logs_data
 #     ]
 
-# class AssetController(BaseController):
-#     def __init__(self, db_connection):
-#         super().__init__(db_connection, "assets")
 
-#     def search(self, **kwargs):
-#         assets_data = self.collection.find(kwargs)
-#         return [
-#         {
-#             '_id': str(asset['_id']),
-#             'asset_name': asset['asset_name'],
-#             'asset_value': asset['asset_value'],
-#             'asset_name': asset['asset_name'],
-#             'date': asset['date'],
-#             'description': asset['description']
-#         }
-#         for asset in assets_data
-#     ]
+class MatieresManager(BaseController):
+    def __init__(self, db_connection):
+        super().__init__(db_connection, "users")
+        self.db = db_connection
+        self.matieres_collection = self.db["matieres"]
+        self.codes_collection = self.db["codes_acces"]
 
-# class CategoryController(BaseController):
-#     def __init__(self, db_connection):
-#         super().__init__(db_connection, "categories")
+    def generate_code(self, matiere_id=None, chapitre_id=None, expiration_days=7, usage_limit=1):
+        """
+        Génère un code d'accès pour une matière ou un chapitre.
+        """
+        code = ''.join(random.choices(string.ascii_uppercase + string.digits, k=8))
+        expiration_date = datetime.now() + timedelta(days=expiration_days)
 
-#     def search(self, **kwargs):
-#         categories_data = self.collection.find(kwargs)
-#         return [
-#         {
-#             '_id': str(category['_id']),
-#             'category_name': category['category_name']
-#         }
-#         for category in categories_data
-#     ]
+        self.codes_collection.insert_one({
+            "code": code,
+            "matiere_id": str(matiere_id) if matiere_id else None,
+            "chapitre_id": str(chapitre_id) if chapitre_id else None,
+            "expiration_date": expiration_date,
+            "usage_limit": usage_limit,
+            "used_count": 0
+        })
 
-# class PeriodController(BaseController):
-#     def __init__(self, db_connection):
-#         super().__init__(db_connection, "periods")
+        return code
 
-#     def search(self, **kwargs):
-#         periods_data = self.collection.find(kwargs)
-#         return [
-#         {
-#             '_id': str(period['_id']),
-#             'start_date': period['start_date'],
-#             'end_date': period['end_date']
-#         }
-#         for period in periods_data
-#     ]
+    def validate_code(self, code, etudiant_id):
+        """
+        Valide et utilise un code d'accès pour inscrire un étudiant.
+        """
+        code_data = self.codes_collection.find_one({"code": code})
+        if not code_data:
+            return {'error': 'Code invalide'}, 404
 
+        if code_data['expiration_date'] < datetime.now():
+            return {'error': 'Code expiré'}, 403
 
-# class DeptController(BaseController):
-#     def __init__(self, db_connection):
-#         super().__init__(db_connection, "depts")
+        if code_data['used_count'] >= code_data['usage_limit']:
+            return {'error': 'Code déjà utilisé au maximum'}, 403
 
-#     def search(self, **kwargs):
-#         depts_data = self.collection.find(kwargs)
-#         return [
-#         {
-#             '_id': str(dept['_id']),
-#             'debt_type': dept['debt_type'],
-#             'principal': dept['principal'],
-#             'maturity_date': dept['maturity_date'],
-#             'payment_due_date': dept['payment_due_date'],
-#             'amount_paid': dept['amount_paid'],
-#             'outstanding_balance': dept['outstanding_balance'],
-#             'description': dept['description']
-#         }
-#         for dept in depts_data
-#     ]
+        if code_data['matiere_id']:
+            self.add_etudiant_to_matiere(code_data['matiere_id'], etudiant_id)
+        elif code_data['chapitre_id']:
+            self.add_etudiant_to_chapitre(code_data['matiere_id'], code_data['chapitre_id'], etudiant_id)
 
-# class NotificationController(BaseController):
-#     def __init__(self, db_connection):
-#         super().__init__(db_connection, "notifications")
+        # Mise à jour de l'utilisation du code
+        code_data['used_count'] += 1
+        if code_data['used_count'] >= code_data['usage_limit']:
+            self.codes_collection.delete_one({"_id": code_data["_id"]})
+        else:
+            self.codes_collection.update_one(
+                {"_id": code_data["_id"]},
+                {"$set": {"used_count": code_data['used_count']}}
+            )
+        return {'message': 'Code utilisé avec succès'}, 200
 
+    def add(self, document):
+        """
+        Ajoute une matière à la collection.
+        """
+        existing_matiere = self.matieres_collection.find_one({
+            'nomMatiere': document['nomMatiere'],
+            'enseignant': document['enseignant']
+        })
 
-#     def search(self, **kwargs):
-#         notifications_data = self.collection.find(kwargs)
-#         return [
-#         {
-#             '_id': str(notification['_id']),
-#             'user': notification['user'],
-#             'message': notification['message'],
-#             'status': notification['status'],
-#             'created_at': notification['created_at']
-#         }
-#         for notification in notifications_data
-#     ]
+        if existing_matiere:
+            existing_etudiants = set(existing_matiere.get('etudiants', []))
+            new_etudiants = set(document.get('etudiants', []))
+            etudiants_to_add = new_etudiants - existing_etudiants
 
-# class ExpenseController(BaseController):
-#     def __init__(self, db_connection):
-#         super().__init__(db_connection, "expenses")
+            if etudiants_to_add:
+                self.matieres_collection.update_one(
+                    {"_id": existing_matiere["_id"]},
+                    {"$push": {"etudiants": {"$each": list(etudiants_to_add)}}}
+                )
+        else:
+            document['chapitres'] = []  # Initialiser les chapitres
+            self.matieres_collection.insert_one(document)
 
-#     def search(self, **kwargs):
-#         expenses_data = self.collection.find(kwargs)
-#         return [
-#         {
-#             '_id': str(expense['_id']),
-#             'description': expense['description'],
-#             'amount_expenses': expense['amount_expenses'],
-#             'date': expense['date'],
-#             'expense_category': expense['expense_category'],
-#             'department': expense['department']
-#         }
-#         for expense in expenses_data
-#     ]
+    def add_chapitre(self, matiere_id, chapitre):
+        """
+        Ajoute un chapitre à une matière.
+        """
+        matiere = self.matieres_collection.find_one({"_id": ObjectId(matiere_id)})
+        if not matiere:
+            return {'error': 'Matière introuvable'}, 404
 
-# class ReportController(BaseController):
-#     def __init__(self, db_connection):
-#         super().__init__(db_connection, "reports")
+        chapitre['_id'] = str(ObjectId())  # Générer un ID unique pour le chapitre
+        chapitre['classe'] = chapitre.get('classe', [])  # Initialiser la classe
+        self.matieres_collection.update_one(
+            {"_id": ObjectId(matiere_id)},
+            {"$push": {"chapitres": chapitre}}
+        )
+        return {'message': 'Chapitre ajouté à la matière'}, 200
 
-#     def search(self, **kwargs):
-#         """Recherche des rapports selon les critères donnés."""
-#         reports_data = self.collection.find(kwargs)
-#         return [
-#         {
-#             '_id': str(report['_id']),
-#             'report_type': report['report_type'],
-#             'generated_at': report['generated_at'],
-#             'period': report['period'],
-#             'created_by': report['created_by']
-#         }
-#         for report in reports_data
-#     ]
+    def add_etudiant_to_matiere(self, matiere_id, etudiant_id):
+        """
+        Ajoute un étudiant à une matière.
+        """
+        matiere = self.matieres_collection.find_one({"_id": ObjectId(matiere_id)})
+        if not matiere:
+            return {'error': 'Matière introuvable'}, 404
 
-# class RevenueController(BaseController):
-#     def __init__(self, db_connection):
-#         super().__init__(db_connection, "revenues")
+        if etudiant_id not in matiere.get('etudiants', []):
+            self.matieres_collection.update_one(
+                {"_id": ObjectId(matiere_id)},
+                {"$push": {"etudiants": etudiant_id}}
+            )
+        return {'message': 'Étudiant ajouté à la matière'}, 200
 
-#     def search(self, **kwargs):
-#         """Recherche des revenus selon les critères donnés."""
-#         revenues_data = self.collection.find(kwargs)
-#         return [
-#                 {
-#                     '_id': str(revenue['_id']),
-#                     'description': revenue['description'],
-#                     'amount_revenue': revenue['amount_revenue'],
-#                     'date': revenue['date'],
-#                     'product_line': revenue['product_line'],
-#                     'customer_type': revenue['customer_type']
-#                 }
-#                 for revenue in revenues_data
-#             ]
+    def add_etudiant_to_chapitre(self, matiere_id, chapitre_id, etudiant_id):
+        """
+        Ajoute un étudiant à un chapitre spécifique.
+        """
+        matiere = self.matieres_collection.find_one({"_id": ObjectId(matiere_id)})
+        if not matiere:
+            return {'error': 'Matière introuvable'}, 404
 
+        chapitre = next((c for c in matiere['chapitres'] if c['_id'] == chapitre_id), None)
+        if not chapitre:
+            return {'error': 'Chapitre introuvable'}, 404
 
-# class FundingController(BaseController):
-#     def __init__(self, db_connection):
-#         super().__init__(db_connection, "fundings")
-
-#     def search(self, **kwargs):
-#         fundings_data = self.collection.find(kwargs)
-#         return [
-#         {
-#             '_id': str(funding['_id']),
-#             'funding_round': funding['funding_round'],
-#             'amount_raised': funding['amount_raised'],
-#             'date': funding['date'],
-#             'investor_name': funding['investor_name'],
-#             'valuation': funding['valuation'],
-#             'description': funding['description']
-#         }
-#         for funding in fundings_data
-#     ]
-
-# class CashController(BaseController):
-#     def __init__(self, db_connection):
-#         super().__init__(db_connection, "Cashs")
-
-#     def search(self, **kwargs):
-#         fundings_data = self.collection.find(kwargs)
-#         return [
-#         {
-#             '_id': str(funding['_id']),
-#             'cash_inflow': funding['cash_inflow'],
-#             'cash_outflow': funding['cash_outflow'],
-#             'date': funding['date'],
-#             'net_cash_flow': funding['net_cash_flow'],
-#             'category': funding['category'],
-#             'description': funding['description']
-#         }
-#         for funding in fundings_data
-#     ]
-
-# class KPIController(BaseController):
-#     def __init__(self, db_connection):
-#         super().__init__(db_connection, "kpis")
-
-#     def search(self, **kwargs):
-#         kpis_data = self.collection.find(kwargs)
-#         return [
-#         {
-#             '_id': str(kpi['_id']),
-#             'name': kpi['name'],
-#             'value': kpi['value'],
-#             'date': kpi['date']
-#         }
-#         for kpi in kpis_data
-#     ]
-# class ProjectController(BaseController):
-#     def __init__(self, db_connection):
-#         super().__init__(db_connection, "projects")
-
-#     def search(self, **kwargs):
-#         projects_data = self.collection.find(kwargs)
-#         return [
-#         {
-#             '_id': str(project['_id']),
-#             'project_name': project['project_name'],
-#             'start_date': project['start_date'],
-#             'end_date': project['end_date'],
-#             'created_by': project['created_by']
-#         }
-#         for project in projects_data
-#     ]
-
-# class ProfitController(BaseController):
-#     def __init__(self, db_connection):
-#         super().__init__(db_connection, "profits")
-
-#     def search(self, **kwargs):
-#         profits_data = self.collection.find(kwargs)
-#         return [
-#         {
-#             '_id': str(profit['_id']),
-#             'date': profit['date'],
-#             'revenue': profit['revenue'],
-#             'expenses': profit['expenses'],
-#             'net_profit': profit['net_profit'],
-#             'profit_margin': profit['profit_margin'],
-#             'description': profit['description']
-#         }
-#         for profit in profits_data
-#     ]
-
-# class InvestController(BaseController):
-#     def __init__(self, db_connection):
-#         super().__init__(db_connection, "invests")
-
-#     def search(self, **kwargs):
-#         invests_data = self.collection.find(kwargs)
-#         return [
-#         {
-#             '_id': str(invest['_id']),
-#             'date': invest['date'],
-#             'investment_type': invest['investment_type'],
-#             'investment_amount': invest['investment_amount'],
-#             'returns': invest['returns'],
-#             'risk_level': invest['risk_level'],
-#             'current_value': invest['current_value'],
-#             'description': invest['description']
-#         }
-#         for invest in invests_data
-#     ]
+        if etudiant_id not in chapitre.get('classe', []):
+            self.matieres_collection.update_one(
+                {"_id": ObjectId(matiere_id), "chapitres._id": chapitre_id},
+                {"$push": {"chapitres.$.classe": etudiant_id}}
+            )
+            return {'message': 'Étudiant ajouté au chapitre'}, 200
+        else:
+            return {'error': 'Étudiant déjà dans le chapitre'}, 400
