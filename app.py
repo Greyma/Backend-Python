@@ -167,11 +167,11 @@ def generateCode() :
     results = controllers['matiere'].generate_code(matiere_id=data['matiere_id'], chapitre_id=data['chapitre_id'], expiration_days=data['expiration_days'], usage_limit=data['usage_limit'])   
     return jsonify(results), 200
 
-@app.route('/<Matiere>/<Courseid>', methods=['GET'])
-# @token_required(['admin', '671420c2df2d71de25efde15', 'viewer'])
-def Course(Matiere,Courseid) :
-    result = controllers['matiere'].get_Course(Matiere,Courseid)
-    return jsonify(result), 200
+# @app.route('/<Matiere>/<Courseid>', methods=['GET'])
+# # @token_required(['admin', '671420c2df2d71de25efde15', 'viewer'])
+# def Course(Matiere,Courseid) :
+#     result = controllers['matiere'].get_Course(Matiere,Courseid)
+#     return jsonify(result), 200
 
 # Exécution de l'application
 if __name__ == '__main__':
