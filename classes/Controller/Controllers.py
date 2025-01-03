@@ -292,10 +292,9 @@ class RoleController(BaseController):
 
 class MatieresManager(BaseController):
     def __init__(self, db_connection):
-        super().__init__(db_connection, "users")
+        super().__init__(db_connection, "matieres")
         self.db = db_connection
-        self.matieres_collection = self.db["matieres"]
-        self.codes_collection = self.db["codes_acces"]
+        self.collection = db_connection.get_collection("codes_acces")
 
     def generate_code(self, matiere_id=None, chapitre_id=None, expiration_days=7, usage_limit=1):
         """
