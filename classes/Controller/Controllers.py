@@ -427,3 +427,13 @@ class MatieresManager(BaseController):
             return {'message': 'Étudiant ajouté au chapitre'}, 200
         else:
             return {'error': 'Étudiant déjà dans le chapitre'}, 400
+
+    def search(self, **kwargs):
+        matieres = self.collection.find(kwargs)
+        return [
+        {
+            '_id': str(matieres['_id']),
+            # le reste de la recherche !
+        }
+        for matiere in matieres
+    ]
