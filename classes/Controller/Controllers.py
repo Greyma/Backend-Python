@@ -384,6 +384,14 @@ class MatieresManager(BaseController):
         )
         return {'message': 'Chapitre ajouté à la matière'}, 200
 
+    def get_Course (self,matiere_id, chapitre_id) : 
+        matiere = self.matieres_collection.find_one({"name": ObjectId(matiere_id)})
+        if not matiere:
+            return {'error': 'Matière introuvable'}, 404
+        else :
+            chapitre = self.matieres_collection.find_one({"_id": ObjectId(chapitre_id)})
+            return chapitre
+        
     def add_etudiant_to_matiere(self, matiere_id, etudiant_id):
         """
         Ajoute un étudiant à une matière.
