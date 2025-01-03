@@ -138,25 +138,25 @@ def authentificate():
 
 
 @app.route('/addmatiere',methods=['POST']) 
-def ajouter() : 
+def addmatiere() : 
     data = request.json
     controllers['matiere'].add(data)
     return jsonify({"message": f"{controllers['matiere'].capitalize()} ajouté avec succès"}), 201
 
-@app.route('/chapitre',methods=['POST']) 
-def ajouter() : 
+@app.route('/addchapitre',methods=['POST']) 
+def chapitre() : 
     data = request.json
     controllers['matiere'].add_chapitre(data)
     return jsonify({"message": f"{controllers['matiere'].capitalize()} ajouté avec succès"}), 201
 
 @app.route('/to_chapitre',methods=['POST']) 
-def ajouter() : 
+def to_chapitre() : 
     data = request.json
     controllers['matiere'].add_etudiant_to_chapitre(data)
     return jsonify({"message": f"{controllers['matiere'].capitalize()} ajouté avec succès"}), 201
 
 @app.route('/to_matiere',methods=['POST']) 
-def ajouter() : 
+def to_matiere() : 
     data = request.json
     controllers['matiere'].add_etudiant_to_matiere(data)
     return jsonify({"message": f"{controllers['matiere'].capitalize()} ajouté avec succès"}), 201
@@ -167,11 +167,11 @@ def generateCode() :
     results = controllers['matiere'].generate_code(matiere_id=data['matiere_id'], chapitre_id=data['chapitre_id'], expiration_days=data['expiration_days'], usage_limit=data['usage_limit'])   
     return jsonify(results), 200
 
-# @app.route('/<Matiere>/<Courseid>', methods=['GET'])
+@app.route('/<Matiere>/<Courseid>', methods=['GET'])
 # # @token_required(['admin', '671420c2df2d71de25efde15', 'viewer'])
-# def Course(Matiere,Courseid) :
-#     result = controllers['matiere'].get_Course(Matiere,Courseid)
-#     return jsonify(result), 200
+def Course(Matiere,Courseid) :
+    result = controllers['matiere'].get_Course(Matiere,Courseid)
+    return jsonify(result), 200
 
 # Exécution de l'application
 if __name__ == '__main__':
