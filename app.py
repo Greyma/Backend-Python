@@ -1,4 +1,4 @@
-from flask import Flask, jsonify, request
+from flask import Flask, jsonify, request, send_from_directory
 from Mongodb_class.Mongo_connect import MongoDBConnection
 from flask import Flask, request, jsonify
 from functools import wraps
@@ -8,8 +8,10 @@ from classes.Controller.observer import ConcreteObserver
 from flask_cors import CORS
 import os
 from classes.Controller.Controllers import (
- UserController, EtudiantController ,EnseignantsController ,MatieresManager
+  EtudiantController ,EnseignantsController ,CoursController, MatierController
     )
+from werkzeug.utils import secure_filename
+import uuid
 
 
 load_dotenv()
@@ -19,19 +21,24 @@ db_name = os.getenv("db_name")
 API_KEYS_Generative = os.getenv("API_KEYS_Generative")
 
 app = Flask(__name__)
+UPLOAD_FOLDER = 'uploads'
+ALLOWED_EXTENSIONS = {'mp4', 'avi', 'mov', 'mkv', "webm"}
+app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 CORS(app)
 db_connection = MongoDBConnection(uri, db_name)
 
 controllers = {
-    "user": UserController(db_connection),
     "etudiants": EtudiantController(db_connection),
     "enseignants": EnseignantsController(db_connection),
-    "matiere" : MatieresManager(db_connection)
+    "cours" : CoursController(db_connection),
+    "matieres" : MatierController(db_connection)
 
 }
 
 controllers_classes = [
-     UserController,EtudiantController,EnseignantsController,MatieresManager
+     EtudiantController,EnseignantsController,CoursController, MatierController
 
 ]
 
@@ -133,45 +140,103 @@ def search(controller_name):
 @app.route('/login',methods=['POST'])
 def authentificate():
     data = request.json
-    token = controllers['user'].authenticate(data['email'],data['password'])
+    token = controllers['etudiants'].authenticate(data['email'],data['password'])
     return token
 
-
-@app.route('/addmatiere',methods=['POST']) 
-def addmatiere() : 
+@app.route('/cours/<cours_id>/etudiants',methods=['POST'])
+def add_etudiant_to_cours(cours_id):
     data = request.json
-    controllers['matiere'].add(data)
-    return jsonify({"message": f"{controllers['matiere'].capitalize()} ajouté avec succès"}), 201
-
-@app.route('/addchapitre',methods=['POST']) 
-def chapitre() : 
+    controllers['cours'].add_etudiant(cours_id, data['etudiant'])
+    return jsonify({"message": "Etudiant ajouté avec succès"}), 201
+@app.route('/cours/<cours_id>/etudiants',methods=['DELETE'])
+def remove_etudiant_from_cours(cours_id):
     data = request.json
-    controllers['matiere'].add_chapitre(data)
-    return jsonify({"message": f"{controllers['matiere'].capitalize()} ajouté avec succès"}), 201
+    controllers['cours'].remove_etudiant(cours_id, data['etudiant'])
+    return jsonify({"message": "Etudiant supprimé avec succès"}), 200
 
-@app.route('/to_chapitre',methods=['POST']) 
-def to_chapitre() : 
+@app.route('/matieres/<matiere_id>/cours',methods=['POST'])
+def add_cours_to_matiere(matiere_id):
     data = request.json
-    controllers['matiere'].add_etudiant_to_chapitre(data)
-    return jsonify({"message": f"{controllers['matiere'].capitalize()} ajouté avec succès"}), 201
+    return controllers['matieres'].add_cours(matiere_id, data['cours'])
 
-@app.route('/to_matiere',methods=['POST']) 
-def to_matiere() : 
+@app.route('/matieres/<matiere_id>/cours',methods=['DELETE'])
+def remove_cours_from_matiere(matiere_id):
     data = request.json
-    controllers['matiere'].add_etudiant_to_matiere(data)
-    return jsonify({"message": f"{controllers['matiere'].capitalize()} ajouté avec succès"}), 201
-
-@app.route('/generateCode',methods=['POST']) 
-def generateCode() :
+    controllers['matieres'].remove_cours(matiere_id, data['cours'])
+    return jsonify({"message": "Cours supprimé avec succès"}), 200
+@app.route('/matieres/<matiere_id>/etudiants',methods=['POST'])
+def add_etudiant_to_matiere(matiere_id):
     data = request.json
-    results = controllers['matiere'].generate_code(matiere_id=data['matiere_id'], chapitre_id=data['chapitre_id'], expiration_days=data['expiration_days'], usage_limit=data['usage_limit'])   
-    return jsonify(results), 200
+    return controllers['matieres'].add_etudiant(matiere_id, data['etudiant'])
+@app.route('/matieres/<matiere_id>/etudiants',methods=['DELETE'])
+def remove_etudiant_from_matiere(matiere_id):
+    data = request.json
+    controllers['matieres'].remove_etudiant(matiere_id, data['etudiant'])
+    return jsonify({"message": "Etudiant supprimé avec succès"}), 200
+# @app.route('/addmatiere',methods=['POST'])
+# def addmatiere() :
+#     data = request.json
+#     print(data , flush=True)
+#     controllers['matiere'].add(data)
+#     return jsonify({"message": f"{controllers['matiere'].capitalize()} ajouté avec succès"}), 201
 
-@app.route('/<Matiere>/<Courseid>', methods=['GET'])
-# # @token_required(['admin', '671420c2df2d71de25efde15', 'viewer'])
-def Course(Matiere,Courseid) :
-    result = controllers['matiere'].get_Course(Matiere,Courseid)
-    return jsonify(result), 200
+# @app.route('/addchapitre',methods=['POST'])
+# def chapitre() :
+#     data = request.json
+#     controllers['matiere'].add_chapitre(data)
+#     return jsonify({"message": f"{controllers['matiere'].capitalize()} ajouté avec succès"}), 201
+
+# @app.route('/to_chapitre',methods=['POST'])
+# def to_chapitre() :
+#     data = request.json
+#     controllers['matiere'].add_etudiant_to_chapitre(data)
+#     return jsonify({"message": f"{controllers['matiere'].capitalize()} ajouté avec succès"}), 201
+
+# @app.route('/to_matiere',methods=['POST'])
+# def to_matiere() :
+#     data = request.json
+#     controllers['matiere'].add_etudiant_to_matiere(data)
+#     return jsonify({"message": f"{controllers['matiere'].capitalize()} ajouté avec succès"}), 201
+
+# @app.route('/generateCode',methods=['POST'])
+# def generateCode() :
+#     data = request.json
+#     results = controllers['matiere'].generate_code(matiere_id=data['matiere_id'], chapitre_id=data['chapitre_id'], expiration_days=data['expiration_days'], usage_limit=data['usage_limit'])
+#     return jsonify(results), 200
+
+# @app.route('/<Matiere>/<Courseid>', methods=['GET'])
+# # # @token_required(['admin', '671420c2df2d71de25efde15', 'viewer'])
+# def Course(Matiere,Courseid) :
+#     result = controllers['matiere'].get_Course(Matiere,Courseid)
+#     return jsonify(result), 200
+
+def allowed_file(filename):
+    return '.' in filename and \
+           filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
+
+@app.route('/upload', methods=['POST'])
+def upload_file():
+    if 'file' not in request.files:
+        return jsonify({"message": "No file part"}), 400
+    file = request.files['file']
+    if file.filename == '':
+        return jsonify({"message": "No selected file"}), 400
+    if file and allowed_file(file.filename):
+        filename = secure_filename(file.filename)
+        file_extension = filename.rsplit('.', 1)[1].lower()
+        unique_filename = f"{uuid.uuid4()}.{file_extension}"
+        file_path = os.path.join(app.config['UPLOAD_FOLDER'], unique_filename)
+        file.save(file_path)
+        return jsonify({"message": "File uploaded successfully", "path": unique_filename}), 201
+    return jsonify({"message": "File type not allowed"}), 400
+
+@app.route('/download/<filename>', methods=['GET'])
+def download_file(filename):
+    file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+    if os.path.exists(file_path):
+        return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
+    return jsonify({"message": "File not found"}), 404
 
 # Exécution de l'application
 if __name__ == '__main__':

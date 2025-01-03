@@ -3,16 +3,28 @@
   "configurations": [
     {
       "name": "Python: Flask",
-      "type": "debugpy",
+      "type": "python",
       "request": "launch",
       "program": "${workspaceFolder}/app.py",
       "env": {
         "FLASK_APP": "app.py",
         "FLASK_ENV": "development",
-        "WERKZEUG_DEBUG_PIN": "off"
+        "WERKZEUG_DEBUG_PIN": "off",
+        "PYTHONUNBUFFERED": "1",
+        "PYDEVD_DISABLE_FILE_VALIDATION": "1"
       },
       "args": ["run", "--no-debugger", "--no-reload"],
+      "pythonArgs": ["-Xfrozen_modules=off"],
       "jinja": true
+    },
+    {
+      "name": "Python: Attach",
+      "type": "python",
+      "request": "attach",
+      "connect": {
+        "host": "localhost",
+        "port": 5678
+      }
     }
   ]
 }
