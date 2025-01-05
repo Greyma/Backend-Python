@@ -118,15 +118,11 @@ class EtudiantController(BaseController):
         return [
             {
                 '_id': str(etudiant['_id']),
-                'nom': etudiant['nom'],
-                'prenom': etudiant['prenom'],
-                'date_naissance': etudiant['date_naissance'],
-                'telephone': etudiant['telephone'],
-                'telephone_pere': etudiant['telephone_pere'],
-                'niveauAcademique': etudiant['niveauAcademique'],
-                'annee_scholaire': etudiant['annee_scholaire'],
-                'code_de_barre': etudiant['code_de_barre'],
-                'password': etudiant['password']
+                'nom': etudiant.get('nom'),
+                'prenom': etudiant.get('prenom'),
+                'telephone': etudiant.get('telephone'),
+                'telephonePere': etudiant.get('telephonePere'),
+                'photo': etudiant.get('photo'),
             }
             for etudiant in etudiants_data
         ]
@@ -137,13 +133,13 @@ class EtudiantController(BaseController):
 
         if etudiant and bcrypt.checkpw(password.encode('utf-8'), etudiant['password'].encode('utf-8')):
             # Générer les tokens JWT
-            access_token = self._generate_access_token(etudiant['_id'], etudiant['nom'], etudiant['prenom'], etudiant['email'], etudiant['password'], etudiant['niveauAcademique'])
-            refresh_token = self._generate_refresh_token(etudiant['_id'], etudiant['niveauAcademique'])
+            access_token = self._generate_access_token(etudiant['_id'], etudiant.get('nom'), etudiant.get('prenom'), etudiant.get('email'), etudiant.get('password'), etudiant.get('telephone'))
+            refresh_token = self._generate_refresh_token(etudiant['_id'], etudiant.get('telephone'))
 
             etudiant['access_token'] = access_token
             etudiant['refresh_token'] = refresh_token
             # Stocker le refresh token
-            refresh_tokens_store[str(etudiant['_id']), str(etudiant['niveauAcademique'])] = refresh_token
+            refresh_tokens_store[str(etudiant['_id']), str(etudiant.get('telephone'))] = refresh_token
             return {
                 'message': 'Connexion réussie',
                 'access_token': access_token,
@@ -152,7 +148,7 @@ class EtudiantController(BaseController):
 
         return {'error': 'Email ou mot de passe incorrect'}
 
-    def _generate_access_token(self, etudiant_id, nom, prenom, email, password, niveauAcademique):
+    def _generate_access_token(self, etudiant_id, nom, prenom, email, password, telephone):
         """Génère un token JWT valide pendant 24 heures."""
         payload = {
             'etudiant_id': str(etudiant_id),
@@ -160,16 +156,16 @@ class EtudiantController(BaseController):
             'prenom': prenom,
             'email': email,
             'password': password,
-            'niveauAcademique': niveauAcademique,
+            'telephone': telephone,
             'exp': datetime.utcnow() + timedelta(hours=24)
         }
         return jwt.encode(payload, SECRET_KEY, algorithm='HS256')
 
-    def _generate_refresh_token(self, etudiant_id, niveauAcademique, expires_in=7):
+    def _generate_refresh_token(self, etudiant_id, telephone, expires_in=7):
         """Génère un refresh token valide pour 7 jours."""
         payload = {
             'etudiant_id': str(etudiant_id),
-            'niveauAcademique': niveauAcademique,
+            'telephone': telephone,
             'exp': datetime.utcnow() + timedelta(days=expires_in)
         }
         return jwt.encode(payload, REFRESH_SECRET_KEY, algorithm='HS256')
@@ -180,10 +176,10 @@ class EtudiantController(BaseController):
             # Décodage du refresh token
             payload = jwt.decode(refresh_token, REFRESH_SECRET_KEY, algorithms=['HS256'])
             etudiant_id = payload['etudiant_id']
-            niveauAcademique = payload['niveauAcademique']
+            telephone = payload['telephone']
 
             # Vérifier si le refresh token est valide
-            stored_token = refresh_tokens_store.get((etudiant_id, niveauAcademique))
+            stored_token = refresh_tokens_store.get((etudiant_id, telephone))
             if stored_token != refresh_token:
                 return {'error': 'Refresh token invalide'}, 401
 
@@ -193,8 +189,8 @@ class EtudiantController(BaseController):
                 return {'error': 'Étudiant introuvable'}, 404
 
             new_access_token = self._generate_access_token(
-                etudiant['_id'], etudiant['nom'], etudiant['prenom'],
-                etudiant['email'], etudiant['password'], etudiant['niveauAcademique']
+                etudiant['_id'], etudiant.get('nom'), etudiant.get('prenom'),
+                etudiant.get('email'), etudiant.get('password'), etudiant.get('telephone')
             )
             return {'access_token': new_access_token}, 200
 
@@ -214,33 +210,12 @@ class EtudiantController(BaseController):
             if not etudiant:
                 return {'valid': False, 'error': 'Étudiant introuvable'}
 
-            return {'valid': True, 'etudiant_id': str(etudiant['_id']), 'niveauAcademique': etudiant['niveauAcademique']}
+            return {'valid': True, 'etudiant_id': str(etudiant['_id']), 'telephone': etudiant.get('telephone')}
 
         except jwt.ExpiredSignatureError:
             return {'valid': False, 'error': 'Token expiré'}
         except jwt.InvalidTokenError:
             return {'valid': False, 'error': 'Token invalide'}
-
-# class EtudiantController(BaseController):
-#     def __init__(self, db_connection):
-#         super().__init__(db_connection, "etudiants")
-
-#     def search(self, **kwargs):
-#         etudiants_data = self.collection.find(kwargs)
-#         return [
-#             {
-#                 '_id': str(etudiant['_id']),
-#                 'nom': etudiant['nom'],
-#                 'prenom': etudiant['prenom'],
-#                 'date_naissance': etudiant['date_naissance'],
-#                 'telephone': etudiant['telephone'],
-#                 'telephone_pere': etudiant['telephone_pere'],
-#                 'niveau_scholaire': etudiant['niveau_scholaire'],
-#                 'annee_scholaire': etudiant['annee_scholaire'],
-#                 'code_de_barre': etudiant['code_de_barre']
-#             }
-#             for etudiant in etudiants_data
-#         ]
 
 
 class EnseignantsController(BaseController):
@@ -252,11 +227,11 @@ class EnseignantsController(BaseController):
         return [
             {
                 '_id': str(enseignant['_id']),
-                'nom': enseignant['nom'],
-                'prenom': enseignant['prenom'],
-                'telephone': enseignant['telephone'],
-                'code_barre': enseignant['code_barre'],
-                'niveau_academique': enseignant['niveau_academique']
+                'nom': enseignant.get('nom'),
+                'prenom': enseignant.get('prenom'),
+                'telephone': enseignant.get('telephone'),
+                'codeBarre': enseignant.get('codeBarre'),
+                'niveauAcademique': enseignant.get('niveauAcademique')
             }
             for enseignant in enseignants_data
         ]
@@ -268,7 +243,6 @@ class EnseignantsController(BaseController):
 
     def update(self, document_id, updated_data):
         super().update(document_id, updated_data)
-
 
 
 class CoursController(BaseController):
@@ -285,31 +259,28 @@ class CoursController(BaseController):
                 if etudiant:
                     etudiants_list.append({
                         '_id': str(etudiant['_id']),
-                        'nom': etudiant['nom'],
-                        'prenom': etudiant['prenom'],
-                        'dateNaissance': etudiant['dateNaissance'],
-                        'telephone': etudiant['telephone'],
-                        'telephonePere': etudiant['telephonePere'],
-                        'niveauAcademique': etudiant['niveauAcademique'],
-                        'anneeScolaire': etudiant['anneeScolaire'],
-                        'codeBarre': etudiant['codeBarre']
+                        'nom': etudiant.get('nom'),
+                        'prenom': etudiant.get('prenom'),
+                        'telephone': etudiant.get('telephone'),
+                        'telephonePere': etudiant.get('telephonePere'),
+                        'photo': etudiant.get('photo')
                     })
-            enseignant = self.collection.database['enseignants'].find_one({"_id": ObjectId(cours['enseignant'])})
+            enseignant = self.collection.database['enseignants'].find_one({"_id": ObjectId(cours.get('enseignant', '6777fe56111b5577044c126c'))})
             enseignant_info = {
                 '_id': str(enseignant['_id']),
-                'nom': enseignant['nom'],
-                'prenom': enseignant['prenom'],
-                'telephone': enseignant['telephone'],
-                'codeBarre': enseignant['codeBarre'],
-                'niveauAcademique': enseignant['niveauAcademique']
+                'nom': enseignant.get('nom'),
+                'prenom': enseignant.get('prenom'),
+                'telephone': enseignant.get('telephone'),
+                'codeBarre': enseignant.get('codeBarre'),
+                'niveauAcademique': enseignant.get('niveauAcademique')
             } if enseignant else None
             result.append({
                 '_id': str(cours['_id']),
-                'nom': cours['nom'],
-                'description': cours['description'],
+                'nom': cours.get('nom'),
+                'description': cours.get('description'),
                 'enseignant': enseignant_info,
-                'tags': cours['tags'],
-                'path_video': cours['path_video'],
+                'tags': cours.get('tags'),
+                'path_video': cours.get('path_video'),
                 'etudiants': etudiants_list
             })
         return result
@@ -361,15 +332,15 @@ class MatierController(BaseController):
         for matier in matiers_data:
             # Populate cours array
             cours_list = []
-            for cours_id in matier['cours']:
+            for cours_id in matier.get('cours', []):
                 cours = self.collection.database['cours'].find_one({"_id": ObjectId(cours_id)})
                 if cours:
                     cours_list.append({
                         '_id': str(cours['_id']),
-                        'nom': cours['nom'],
-                        'description': cours['description'],
-                        'tags': cours['tags'],
-                        'path_video': cours['path_video'],
+                        'nom': cours.get('nom'),
+                        'description': cours.get('description'),
+                        'tags': cours.get('tags'),
+                        'path_video': cours.get('path_video'),
                         'etudiants': [str(etudiant_id) for etudiant_id in cours.get('etudiants', [])]
                     })
             # Populate etudiants array
@@ -379,28 +350,25 @@ class MatierController(BaseController):
                 if etudiant:
                     etudiants_list.append({
                         '_id': str(etudiant['_id']),
-                        'nom': etudiant['nom'],
-                        'prenom': etudiant['prenom'],
-                        'dateNaissance': etudiant['dateNaissance'],
-                        'telephone': etudiant['telephone'],
-                        'telephonePere': etudiant['telephonePere'],
-                        'niveauAcademique': etudiant['niveauAcademique'],
-                        'anneeScolaire': etudiant['anneeScolaire'],
-                        'codeBarre': etudiant['codeBarre']
+                        'nom': etudiant.get('nom'),
+                        'prenom': etudiant.get('prenom'),
+                        'telephone': etudiant.get('telephone'),
+                        'telephonePere': etudiant.get('telephonePere'),
+                        'photo': etudiant.get('photo')
                     })
             # Populate enseignant
-            enseignant = self.collection.database['enseignants'].find_one({"_id": ObjectId(matier['enseignant'])})
+            enseignant = self.collection.database['enseignants'].find_one({"_id": ObjectId(matier.get('enseignant'))})
             enseignant_info = {
                 '_id': str(enseignant['_id']),
-                'nom': enseignant['nom'],
-                'prenom': enseignant['prenom'],
-                'telephone': enseignant['telephone'],
-                'codeBarre': enseignant['codeBarre'],
-                'niveauAcademique': enseignant['niveauAcademique']
+                'nom': enseignant.get('nom'),
+                'prenom': enseignant.get('prenom'),
+                'telephone': enseignant.get('telephone'),
+                'codeBarre': enseignant.get('codeBarre'),
+                'niveauAcademique': enseignant.get('niveauAcademique')
             } if enseignant else None
             result.append({
                 '_id': str(matier['_id']),
-                'nom': matier['nom'],
+                'nom': matier.get('nom'),
                 'enseignant': enseignant_info,
                 'cours': cours_list,
                 'etudiants': etudiants_list

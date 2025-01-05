@@ -1,4 +1,4 @@
-from flask import Flask, jsonify, request, send_from_directory
+from flask import Flask, jsonify, request , send_file , Response
 from Mongodb_class.Mongo_connect import MongoDBConnection
 from flask import Flask, request, jsonify
 from functools import wraps
@@ -12,7 +12,11 @@ from classes.Controller.Controllers import (
     )
 from werkzeug.utils import secure_filename
 import uuid
+import xml.etree.ElementTree as ET
+import io
+import ffmpeg
 
+import requests
 
 load_dotenv()
 SECRET_KEY =  os.getenv("SECRET_KEY")
@@ -22,7 +26,7 @@ API_KEYS_Generative = os.getenv("API_KEYS_Generative")
 
 app = Flask(__name__)
 UPLOAD_FOLDER = 'uploads'
-ALLOWED_EXTENSIONS = {'mp4', 'avi', 'mov', 'mkv', "webm"}
+ALLOWED_EXTENSIONS = {'mp4', 'avi', 'mov', 'mkv', "webm" , "jpg" ,"img" , "png",}
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
@@ -215,28 +219,95 @@ def allowed_file(filename):
            filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 
+WEBDAV_URL = os.getenv("CLOUD_URL")
+WEBDAV_AUTH = (os.getenv("CLOUD_USER"), os.getenv("CLOUD_PASSWORD"))
+
 @app.route('/upload', methods=['POST'])
 def upload_file():
-    if 'file' not in request.files:
-        return jsonify({"message": "No file part"}), 400
-    file = request.files['file']
-    if file.filename == '':
-        return jsonify({"message": "No selected file"}), 400
-    if file and allowed_file(file.filename):
+    try:
+        file = request.files['file']
         filename = secure_filename(file.filename)
-        file_extension = filename.rsplit('.', 1)[1].lower()
-        unique_filename = f"{uuid.uuid4()}.{file_extension}"
-        file_path = os.path.join(app.config['UPLOAD_FOLDER'], unique_filename)
-        file.save(file_path)
-        return jsonify({"message": "File uploaded successfully", "path": unique_filename}), 201
-    return jsonify({"message": "File type not allowed"}), 400
+        file_path = f"{WEBDAV_URL}{filename}"
+        response = requests.put(file_path, data=file.stream, auth=WEBDAV_AUTH)
+        if response.status_code == 201:
+            return jsonify({"message": "File uploaded successfully", "path": f"/download/{filename}"}), 201
+        elif response.status_code == 204:
+            return jsonify({"message": "File already exists", "path": f"download/{filename}"}), 200
+        else:
+            return jsonify({"message": "File not uploaded", "error": response.text}), 400
+    except Exception as e:
+        return jsonify({"message": "An error occurred", "error": str(e)}), 500
+
+
+@app.route('/list_files', methods=['GET'])
+def list_files():
+    try:
+        response = requests.request("PROPFIND", WEBDAV_URL, auth=WEBDAV_AUTH)
+        if response.status_code == 207:
+            tree = ET.fromstring(response.content)
+            files = []
+            for elem in tree.findall('.//{DAV:}href'):
+                file_name = elem.text.split('/')[-1]
+                if file_name:  # Exclude empty strings
+                    files.append(file_name)
+            return jsonify({"files": files}), 200
+        else:
+            return jsonify({"message": "Failed to list files", "error": response.text}), 400
+    except Exception as e:
+        return jsonify({"message": "An error occurred", "error": str(e)}), 500
 
 @app.route('/download/<filename>', methods=['GET'])
 def download_file(filename):
-    file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-    if os.path.exists(file_path):
-        return send_from_directory(app.config['UPLOAD_FOLDER'], filename)
-    return jsonify({"message": "File not found"}), 404
+    try:
+        file_url = WEBDAV_URL + filename
+        response = requests.get(file_url, auth=WEBDAV_AUTH)
+        if response.status_code == 200:
+            return send_file(io.BytesIO(response.content), download_name=filename, as_attachment=True)
+        else:
+            return jsonify({"message": "File not found", "error": response.text}), 404
+    except Exception as e:
+        return jsonify({"message": "An error occurred", "error": str(e)}), 500
+
+
+@app.route('/stream/<filename>', methods=['GET'])
+def stream_video(filename):
+    quality = request.args.get('quality', 'high')  # Default to high quality
+    file_url = WEBDAV_URL + filename
+    response = requests.get(file_url, auth=WEBDAV_AUTH, stream=True)
+    if response.status_code != 200:
+        return jsonify({"message": "File not found", "error": response.text}), 404
+
+    def generate():
+        if quality == 'low':
+            process = (
+                ffmpeg
+                .input('pipe:0')
+                .output('pipe:1', format='mp4', vcodec='libx264', video_bitrate='500k')
+                .run_async(pipe_stdin=True, pipe_stdout=True)
+            )
+        else:
+            process = (
+                ffmpeg
+                .input('pipe:0')
+                .output('pipe:1', format='mp4', vcodec='libx264')
+                .run_async(pipe_stdin=True, pipe_stdout=True)
+            )
+
+        for chunk in response.iter_content(chunk_size=1024):
+            process.stdin.write(chunk)
+        process.stdin.close()
+
+        while True:
+            out_chunk = process.stdout.read(1024)
+            if not out_chunk:
+                break
+            yield out_chunk
+
+        process.stdout.close()
+        process.wait()
+
+    return Response(generate(), content_type='video/mp4', direct_passthrough=True)
+
 
 # Exécution de l'application
 if __name__ == '__main__':
