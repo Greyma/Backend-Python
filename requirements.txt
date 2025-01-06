@@ -9,3 +9,4 @@ bcrypt
 PyJWT
 python-dotenv
 flask_cors
+ffmpeg
