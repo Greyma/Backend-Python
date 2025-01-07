@@ -38,11 +38,11 @@ controllers = {
     "enseignants": EnseignantsController(db_connection),
     "cours" : CoursController(db_connection),
     "matieres" : MatierController(db_connection),
-    "testimonal" : TestemonialController(db_connection)
+    "testimonials" : TestemonialController(db_connection)
 }
 
 controllers_classes = [
-     EtudiantController,EnseignantsController,CoursController, MatierController
+     EtudiantController,EnseignantsController,CoursController, MatierController , TestemonialController
 
 ]
 
@@ -63,6 +63,7 @@ for ControllerClass in controllers_classes:
 
 def add_item(controller_name):
     data = request.json
+    print(data  )
     controllers[controller_name].add(data)
     return jsonify({"message": f"{controller_name.capitalize()} ajouté avec succès"}), 201
 

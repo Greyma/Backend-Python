@@ -230,7 +230,6 @@ class EnseignantsController(BaseController):
                 'nom': enseignant.get('nom'),
                 'prenom': enseignant.get('prenom'),
                 'telephone': enseignant.get('telephone'),
-                'codeBarre': enseignant.get('codeBarre'),
                 'niveauAcademique': enseignant.get('niveauAcademique')
             }
             for enseignant in enseignants_data
@@ -291,20 +290,10 @@ class CoursController(BaseController):
                         'telephonePere': etudiant.get('telephonePere'),
                         'photo': etudiant.get('photo')
                     })
-            enseignant = self.collection.database['enseignants'].find_one({"_id": ObjectId(cours.get('enseignant', '6777fe56111b5577044c126c'))})
-            enseignant_info = {
-                '_id': str(enseignant['_id']),
-                'nom': enseignant.get('nom'),
-                'prenom': enseignant.get('prenom'),
-                'telephone': enseignant.get('telephone'),
-                'codeBarre': enseignant.get('codeBarre'),
-                'niveauAcademique': enseignant.get('niveauAcademique')
-            } if enseignant else None
             result.append({
                 '_id': str(cours['_id']),
                 'nom': cours.get('nom'),
                 'description': cours.get('description'),
-                'enseignant': enseignant_info,
                 'tags': cours.get('tags'),
                 'path_video': cours.get('path_video'),
                 'etudiants': etudiants_list
