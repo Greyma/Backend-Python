@@ -8,7 +8,7 @@ from classes.Controller.observer import ConcreteObserver
 from flask_cors import CORS
 import os
 from classes.Controller.Controllers import (
-  EtudiantController ,EnseignantsController ,CoursController, MatierController
+  EtudiantController ,EnseignantsController ,CoursController, MatierController,TestemonialController
     )
 from werkzeug.utils import secure_filename
 import uuid
@@ -37,8 +37,8 @@ controllers = {
     "etudiants": EtudiantController(db_connection),
     "enseignants": EnseignantsController(db_connection),
     "cours" : CoursController(db_connection),
-    "matieres" : MatierController(db_connection)
-
+    "matieres" : MatierController(db_connection),
+    "testimonal" : TestemonialController(db_connection)
 }
 
 controllers_classes = [
@@ -177,42 +177,6 @@ def remove_etudiant_from_matiere(matiere_id):
     data = request.json
     controllers['matieres'].remove_etudiant(matiere_id, data['etudiant'])
     return jsonify({"message": "Etudiant supprimé avec succès"}), 200
-# @app.route('/addmatiere',methods=['POST'])
-# def addmatiere() :
-#     data = request.json
-#     print(data , flush=True)
-#     controllers['matiere'].add(data)
-#     return jsonify({"message": f"{controllers['matiere'].capitalize()} ajouté avec succès"}), 201
-
-# @app.route('/addchapitre',methods=['POST'])
-# def chapitre() :
-#     data = request.json
-#     controllers['matiere'].add_chapitre(data)
-#     return jsonify({"message": f"{controllers['matiere'].capitalize()} ajouté avec succès"}), 201
-
-# @app.route('/to_chapitre',methods=['POST'])
-# def to_chapitre() :
-#     data = request.json
-#     controllers['matiere'].add_etudiant_to_chapitre(data)
-#     return jsonify({"message": f"{controllers['matiere'].capitalize()} ajouté avec succès"}), 201
-
-# @app.route('/to_matiere',methods=['POST'])
-# def to_matiere() :
-#     data = request.json
-#     controllers['matiere'].add_etudiant_to_matiere(data)
-#     return jsonify({"message": f"{controllers['matiere'].capitalize()} ajouté avec succès"}), 201
-
-# @app.route('/generateCode',methods=['POST'])
-# def generateCode() :
-#     data = request.json
-#     results = controllers['matiere'].generate_code(matiere_id=data['matiere_id'], chapitre_id=data['chapitre_id'], expiration_days=data['expiration_days'], usage_limit=data['usage_limit'])
-#     return jsonify(results), 200
-
-# @app.route('/<Matiere>/<Courseid>', methods=['GET'])
-# # # @token_required(['admin', '671420c2df2d71de25efde15', 'viewer'])
-# def Course(Matiere,Courseid) :
-#     result = controllers['matiere'].get_Course(Matiere,Courseid)
-#     return jsonify(result), 200
 
 def allowed_file(filename):
     return '.' in filename and \
@@ -312,3 +276,49 @@ def stream_video(filename):
 # Exécution de l'application
 if __name__ == '__main__':
     app.run(debug=True )
+
+
+
+
+
+
+
+
+
+
+# @app.route('/addmatiere',methods=['POST'])
+# def addmatiere() :
+#     data = request.json
+#     print(data , flush=True)
+#     controllers['matiere'].add(data)
+#     return jsonify({"message": f"{controllers['matiere'].capitalize()} ajouté avec succès"}), 201
+
+# @app.route('/addchapitre',methods=['POST'])
+# def chapitre() :
+#     data = request.json
+#     controllers['matiere'].add_chapitre(data)
+#     return jsonify({"message": f"{controllers['matiere'].capitalize()} ajouté avec succès"}), 201
+
+# @app.route('/to_chapitre',methods=['POST'])
+# def to_chapitre() :
+#     data = request.json
+#     controllers['matiere'].add_etudiant_to_chapitre(data)
+#     return jsonify({"message": f"{controllers['matiere'].capitalize()} ajouté avec succès"}), 201
+
+# @app.route('/to_matiere',methods=['POST'])
+# def to_matiere() :
+#     data = request.json
+#     controllers['matiere'].add_etudiant_to_matiere(data)
+#     return jsonify({"message": f"{controllers['matiere'].capitalize()} ajouté avec succès"}), 201
+
+# @app.route('/generateCode',methods=['POST'])
+# def generateCode() :
+#     data = request.json
+#     results = controllers['matiere'].generate_code(matiere_id=data['matiere_id'], chapitre_id=data['chapitre_id'], expiration_days=data['expiration_days'], usage_limit=data['usage_limit'])
+#     return jsonify(results), 200
+
+# @app.route('/<Matiere>/<Courseid>', methods=['GET'])
+# # # @token_required(['admin', '671420c2df2d71de25efde15', 'viewer'])
+# def Course(Matiere,Courseid) :
+#     result = controllers['matiere'].get_Course(Matiere,Courseid)
+#     return jsonify(result), 200

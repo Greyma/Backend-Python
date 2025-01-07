@@ -244,6 +244,32 @@ class EnseignantsController(BaseController):
     def update(self, document_id, updated_data):
         super().update(document_id, updated_data)
 
+class TestemonialController(BaseController):
+
+    def __init__(self, db_connection):
+        super().__init__(db_connection, "testemonial")
+
+    def search(self, **kwargs):
+        testemonial_data = self.collection.find(kwargs)
+        return [
+            {
+                '_id': str(test['_id']),
+                'nom': test.get('nom'),
+                'prenom': test.get('prenom'),
+                'description': test.get('description'),
+                'videoPath': test.get('videoPath'),
+            }
+            for test in testemonial_data
+        ]
+    def add(self, document):
+        super().add(document)
+
+    def delete(self, document_id):
+        super().delete(document_id)
+
+    def update(self, document_id, updated_data):
+        super().update(document_id, updated_data)
+
 
 class CoursController(BaseController):
     def __init__(self, db_connection):
