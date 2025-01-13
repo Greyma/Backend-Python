@@ -8,7 +8,7 @@ from classes.Controller.observer import ConcreteObserver
 from flask_cors import CORS
 import os
 from classes.Controller.Controllers import (
-  EtudiantController ,EnseignantsController ,CoursController, MatierController,TestemonialController
+  EtudiantController ,EnseignantsController ,CoursController, MatierController,TestemonialController, CouponController
     )
 from werkzeug.utils import secure_filename
 import uuid
@@ -27,9 +27,7 @@ API_KEYS_Generative = os.getenv("API_KEYS_Generative")
 app = Flask(__name__)
 UPLOAD_FOLDER = 'uploads'
 ALLOWED_EXTENSIONS = {'mp4', 'avi', 'mov', 'mkv', "webm" , "jpg" ,"img" , "png",}
-app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
-os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 CORS(app)
 db_connection = MongoDBConnection(uri, db_name)
 
@@ -38,12 +36,13 @@ controllers = {
     "enseignants": EnseignantsController(db_connection),
     "cours" : CoursController(db_connection),
     "matieres" : MatierController(db_connection),
-    "testimonials" : TestemonialController(db_connection)
+    "testimonials" : TestemonialController(db_connection),
+    "coupons":  CouponController(db_connection),
 }
 
 controllers_classes = [
      EtudiantController,EnseignantsController,CoursController, MatierController , TestemonialController
-
+ ,CouponController
 ]
 
 # Initialisation de l'observateur unique (Singleton)
@@ -178,6 +177,23 @@ def remove_etudiant_from_matiere(matiere_id):
     data = request.json
     controllers['matieres'].remove_etudiant(matiere_id, data['etudiant'])
     return jsonify({"message": "Etudiant supprimé avec succès"}), 200
+@app.route('/coupons/use', methods=['POST'])
+def use_coupons():
+    token = None
+    if 'Authorization' in request.headers:
+        token = request.headers['Authorization'].split(" ")[1]
+
+    if not token:
+        return jsonify({'error': 'Token manquant !'}), 401
+    etudiant = controllers['etudiants'].verify_token(token)
+    print(etudiant)
+    coupon_data = request.json
+    coupon_code = coupon_data.get('code')
+    if not coupon_code:
+        return jsonify({'error': 'Coupon code manquant !'}), 400
+
+    result = controllers['coupons'].use_coupon(coupon_code, etudiant.get('etudiant').get('_id'))
+    return jsonify(result), 200
 
 def allowed_file(filename):
     return '.' in filename and \

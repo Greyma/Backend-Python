@@ -210,7 +210,10 @@ class EtudiantController(BaseController):
             if not etudiant:
                 return {'valid': False, 'error': 'Étudiant introuvable'}
 
-            return {'valid': True, 'etudiant_id': str(etudiant['_id']), 'telephone': etudiant.get('telephone')}
+            # Supprimer le mot de passe des informations de l'étudiant
+            etudiant.pop('password', None)
+
+            return {'valid': True, 'etudiant': etudiant}
 
         except jwt.ExpiredSignatureError:
             return {'valid': False, 'error': 'Token expiré'}
@@ -445,3 +448,69 @@ class MatierController(BaseController):
             {"_id": matier_id},
             {"$pull": {"etudiants": ObjectId(etudiant_id)}}
         )
+
+
+class CouponController(BaseController):
+    def __init__(self, db_connection):
+        super().__init__(db_connection, "coupons")
+
+    def search(self, **kwargs):
+        coupons_data = self.collection.find(kwargs)
+        return [
+            {
+                '_id': str(coupon['_id']),
+                'code': coupon.get('code'),
+                'nbrOfUses': coupon.get('nbrOfUses'),
+                'maxUses': coupon.get('maxUses'),
+                'accessType': coupon.get('accessType'),
+                'accessId': str(coupon.get('accessId')),
+                'expireAt': coupon.get('expireAt'),
+            }
+            for coupon in coupons_data
+        ]
+
+    def add(self, document):
+        super().add(document)
+
+    def delete(self, document_id):
+        super().delete(document_id)
+
+    def update(self, document_id, updated_data):
+        super().update(document_id, updated_data)
+
+    def verify_coupon(self, code):
+        coupon = self.collection.find_one({'code': code})
+        if not coupon:
+            return {'error': 'Coupon introuvable'}
+        if datetime.strptime(coupon.get('expireAt'), '%Y-%m-%d %H:%M:%S') < datetime.now():
+            return {'error': 'Coupon expiré'}
+        if coupon.get('nbrOfUses' , 0) >= coupon.get("maxUses"):
+            return {'error': 'Le nombre d\'utilisations du coupon est atteint'}
+        return {coupon}
+
+    def use_coupon(self, couponCode , etudiantId ):
+        print(etudiantId)
+        coupon = self.verify_coupon(couponCode)
+        coupon = self.collection.database['coupons'].find_one({"code": couponCode})
+        if 'error' in coupon:
+            return coupon
+        self.collection.update_one(
+            {'_id': coupon['_id']},
+            {'$inc': {'nbrOfUses': 1}}
+        )
+        if  coupon.get('accessType') == "Cour":
+            self.collection.database['cours'].update_one(
+                {'_id':ObjectId( coupon.get('accessId'))},
+                {'$addToSet': {'etudiants': str(etudiantId)}}
+            )
+        elif coupon.get('accessType') == "Matier":
+            self.collection.database['matier'].update_one(
+                {'_id':ObjectId( coupon.get('accessId'))},
+                {'$addToSet':{'etudiants': str(etudiantId)}}
+            )
+        else:
+            return {'error': 'Error lors l\'application de coupon'}
+
+
+
+        return {'message': 'Coupon applied successfully'}
